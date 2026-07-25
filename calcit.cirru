@@ -12,13 +12,7 @@
               if (some? blueprint)
                 let
                     queue $ or (:queue blueprint) ([])
-                  if (empty? queue)
-                    [] $ {}
-                      :id $ str (:id blueprint) |-article
-                      :title $ :title blueprint
-                      :tags $ or (:tags blueprint) (#{})
-                      :links $ or (:links blueprint) ([])
-                      :content $ :content blueprint
+                  if (empty? queue) (markdown-chapter-cards blueprint)
                     filter
                       map queue $ fn (id) (get knowledge-docs id)
                       , some?
@@ -82,7 +76,13 @@
                     first sections
                   active-id $ :id active-section
                   visit-history $ or (:history state) ([])
+                  map-view? $ = (:view state) :map
                   related $ card-recommendations selected-id active-section blueprint
+                  timeline-active-id $ or
+                    find history-timeline-ids $ fn (id) (= id selected-id)
+                    find history-timeline-ids $ fn (id)
+                      = id $ :parent blueprint
+                    , selected-id
                   navigate! $ fn (target-id d!)
                     d! cursor $ {} (:selected target-id) (:active-section |history)
                       :history $ take-last
@@ -92,6 +92,56 @@
                         , 12
                 div
                   {} $ :class-name style-reader-page
+                  div
+                    {} $ :class-name style-history-timeline
+                    div
+                      {} $ :class-name style-history-overview
+                      div
+                        {} $ :class-name style-history-kicker
+                        <> |HISTORY
+                      div
+                        {} $ :class-name style-history-caption
+                        <> "|数域 › 几何 › 时空"
+                    list->
+                      {} $ :class-name style-history-track
+                      map-indexed history-timeline-ids $ fn (idx id)
+                        let
+                            target $ find-knowledge-node id
+                            current? $ = id timeline-active-id
+                            visited? $ some?
+                              find visit-history $ fn (visited-id) (= visited-id id)
+                          [] idx $ div
+                            {} $ :class-name style-history-item
+                            button
+                              {}
+                                :class-name $ if current? (str-spaced style-history-node style-history-node-current)
+                                  if visited? (str-spaced style-history-node style-history-node-visited) style-history-node
+                                :on-click $ fn (e d!) (navigate! id d!)
+                              div
+                                {} $ :class-name style-history-era
+                                <> $ history-milestone-era id
+                              div
+                                {} $ :class-name style-history-label
+                                <> $ :label target
+                            when
+                              < idx $ dec (count history-timeline-ids)
+                              cond
+                                  = idx 1
+                                  span
+                                    {} $ :class-name style-history-connector-group
+                                    <> "|↳ 几何"
+                                (= idx 3)
+                                  span
+                                    {} $ :class-name style-history-connector-group
+                                    <> "|↳ 时空"
+                                true $ span
+                                  {} $ :class-name style-history-connector
+                                  <> "|→"
+                    button
+                      {} (:class-name style-history-map-toggle)
+                        :on-click $ fn (e d!)
+                          d! cursor $ assoc state :view :map
+                      <> |MAP
                   div
                     {} $ :class-name style-reader-left
                     div
@@ -105,6 +155,31 @@
                       div
                         {} $ :class-name style-reader-brand-note
                         <> "|向左回看 · 在中间阅读 · 向右继续"
+                    div
+                      {} $ :class-name style-reader-nav-section
+                      div
+                        {} $ :class-name style-reader-nav-title
+                        <> "|当前文章结构"
+                      div
+                        {} $ :class-name style-reader-nav-title
+                        <> $ str "|共 " (count sections) "| 节 · 点击小节定位"
+                      list->
+                        {} $ :class-name style-reader-outline-list
+                        map-indexed sections $ fn (idx section)
+                          [] idx $ button
+                            {}
+                              :class-name $ if
+                                = active-id $ :id section
+                                str-spaced style-reader-outline-item style-reader-outline-active
+                                , style-reader-outline-item
+                              :on-click $ fn (e d!)
+                                d! cursor $ assoc state :active-section (:id section)
+                            span
+                              {} $ :class-name style-reader-outline-index
+                              <> $ str |0 (+ idx 1)
+                            span
+                              {} $ :class-name style-reader-outline-label
+                              <> $ :title section
                     div
                       {} $ :class-name style-reader-nav-section
                       div
@@ -176,6 +251,18 @@
                       div
                         {} $ :class-name style-reader-formula
                         <> $ :formula node
+                      list->
+                        {} $ :class-name style-reader-dimension-grid
+                        map-indexed (knowledge-dimensions node)
+                          fn (idx dimension)
+                            [] idx $ div
+                              {} $ :class-name style-reader-dimension-card
+                              div
+                                {} $ :class-name style-reader-dimension-label
+                                <> $ :label dimension
+                              div
+                                {} $ :class-name style-reader-dimension-value
+                                <> $ :value dimension
                       when
                         some? $ :tags blueprint
                         list->
@@ -198,20 +285,37 @@
                             :on-click $ fn (e d!)
                               d! cursor $ assoc state :active-section (:id section)
                           div
-                            {} $ :class-name style-reader-section-number
-                            <> $ str |0 (+ idx 1)
-                          div
-                            {} $ :class-name style-reader-section-title
-                            <> $ :title section
-                          div
-                            {} $ :class-name style-reader-section-hint
-                            <> $ str |#
-                              join-str
-                                .to-list $ or (:tags section) (#{} "|文章")
-                                , "|　#"
+                            {} $ :class-name style-reader-section-head
+                            div
+                              {} $ :class-name style-reader-section-heading
+                              span
+                                {} $ :class-name style-reader-section-number
+                                <> $ str |0 (+ idx 1)
+                              div
+                                {} $ :class-name style-reader-section-title
+                                <> $ :title section
+                            div
+                              {} $ :class-name style-reader-section-tags
+                              <> $ str |#
+                                join-str
+                                  .to-list $ or (:tags section) (#{} "|文章")
+                                  , "|　#"
                           div
                             {} $ :class-name style-reader-section-preview
-                            comp-md-block (:content section) ({})
+                            comp-md-block
+                              markdown-body-without-title $ :content section
+                              {}
+                          when
+                            not $ empty?
+                              or (:links section) ([])
+                            div
+                              {} $ :class-name style-reader-section-footer
+                              span
+                                {} $ :class-name style-reader-section-footer-label
+                                <> |LINKS
+                              span
+                                {} $ :class-name style-reader-section-footer-links
+                                <> $ section-links-text section
                   div
                     {} $ :class-name style-reader-right
                     div
@@ -252,6 +356,50 @@
                                     [] tag-idx $ span
                                       {} $ :class-name style-reader-tag
                                       <> $ str |# tag
+                  when map-view? $ div
+                    {} $ :class-name style-overview-map
+                    div
+                      {} $ :class-name style-overview-map-head
+                      div
+                        {} $ :class-name style-overview-map-kicker
+                        <> |GLOBAL-MAP
+                      button
+                        {} (:class-name style-overview-map-close)
+                          :on-click $ fn (e d!)
+                            d! cursor $ assoc state :view :reader
+                        <> "|返回阅读"
+                    div
+                      {} $ :class-name style-overview-map-title
+                      <> "|从数域扩张到时空结构"
+                    list->
+                      {} $ :class-name style-overview-map-grid
+                      map-indexed overview-lanes $ fn (lane-idx lane)
+                        [] lane-idx $ div
+                          {} $ :class-name style-overview-lane
+                          div
+                            {} $ :class-name style-overview-lane-title
+                            <> $ :title lane
+                          div
+                            {} $ :class-name style-overview-lane-note
+                            <> $ :note lane
+                          list->
+                            {} $ :class-name style-overview-card-list
+                            map-indexed (:ids lane)
+                              fn (idx id)
+                                let
+                                    target $ find-knowledge-node id
+                                  [] idx $ button
+                                    {} (:class-name style-overview-card)
+                                      :on-click $ fn (e d!) (navigate! id d!)
+                                    div
+                                      {} $ :class-name style-overview-card-era
+                                      <> $ :era target
+                                    div
+                                      {} $ :class-name style-overview-card-title
+                                      <> $ :label target
+                                    div
+                                      {} $ :class-name style-overview-card-summary
+                                      <> $ :summary target
           :examples $ []
         |find-card-blueprint $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
@@ -263,6 +411,15 @@
               find knowledge-nodes $ fn (node)
                 = id $ :id node
           :examples $ []
+        |history-milestone-era $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defn history-milestone-era (id)
+              case-default id "|跨时期" (|complex-numbers "|1545—1831") (|quaternions |1843) (|grassmann |1844) (|clifford-algebra |1878) (|minkowski-spacetime |1908) (|spinor |1913) (|dirac-equation |1928)
+          :examples $ []
+        |history-timeline-ids $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            def history-timeline-ids $ [] |complex-numbers |quaternions |grassmann |clifford-algebra |minkowski-spacetime |spinor |dirac-equation
+          :examples $ []
         |kind-label $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defn kind-label (kind)
@@ -271,6 +428,19 @@
         |knowledge-bundle $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             def knowledge-bundle $ load-knowledge-docs
+          :examples $ []
+        |knowledge-dimensions $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defn knowledge-dimensions (doc)
+              []
+                {} (:label "|历史时间")
+                  :value $ or (:era doc) "|跨时期"
+                {} (:label "|数域／结构")
+                  :value $ number-domain-label doc
+                {} (:label "|空间维度")
+                  :value $ space-dimension-label doc
+                {} (:label "|知识角色")
+                  :value $ kind-label (:kind doc)
           :examples $ []
         |knowledge-doc-diagnostics $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
@@ -390,6 +560,70 @@
                     :diagnostics diagnostics
               quasiquote $ parse-cirru-edn ~serialized
           :examples $ []
+        |markdown-body-without-title $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defn markdown-body-without-title (content)
+              let
+                  lines $ split-lines content
+                  first-line $ first lines
+                if (starts-with? first-line "|## ")
+                  join-str (rest lines) "|\n"
+                  , content
+          :examples $ []
+        |markdown-chapter-cards $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defn markdown-chapter-cards (doc)
+              let
+                  parts $ split (:content doc) "|\n## "
+                map-indexed parts $ fn (idx part)
+                  let
+                      lines $ split-lines part
+                      first-line $ first lines
+                      heading-in-content? $ starts-with? first-line "|## "
+                      chapter-title $ if heading-in-content? (slice first-line 3)
+                        if (= idx 0)
+                          str (:title doc) "|：概览"
+                          , first-line
+                      chapter-content $ if
+                        or heading-in-content? $ > idx 0
+                        join-str (rest lines) "|\n"
+                        , part
+                    {}
+                      :id $ str (:id doc) |-chapter- idx
+                      :title chapter-title
+                      :tags $ or (:tags doc)
+                        #{} $ kind-label (:kind doc)
+                      :links $ or (:links doc) ([])
+                      :content chapter-content
+          :examples $ []
+        |number-domain-label $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defn number-domain-label (doc)
+              let
+                  id $ :id doc
+                cond
+                    contains? (#{} |real-numbers) id
+                    , "|实数域 ℝ"
+                  (contains? (#{} |complex-numbers |complex-origin |complex-equations |complex-plane-section |complex-multiplication |complex-structure |imaginary-unit |argand-plane |cardano-casus |bombelli-algebra |wessel-argand-gauss |euler-formula |fundamental-theorem-algebra) id)
+                    , "|复数域 ℂ"
+                  (contains? (#{} |quaternions |quaternion-problem |quaternion-product |quaternion-rotation |quaternion-use |hamilton |noncommutativity |so3 |su2 |robotics |computer-graphics) id)
+                    , "|四元数代数 ℍ"
+                  (contains? (#{} |exterior-algebra |grassmann |wedge-product |inner-product |geometric-product |geometric-product-card |clifford-algebra |clifford |clifford-synthesis |clifford-physics |reflection |rotor |spinor |cartan-spinors |conformal-geometric-algebra) id)
+                    , "|外代数 / Clifford"
+                  (contains? (#{} |minkowski-spacetime |spacetime-unification |hyperbolic-rotation |spacetime-fields |lorentz-transform |maxwell-field |dirac-equation |dirac-square-root |quantum-spin) id)
+                    , "|时空与算子代数"
+                  true "|跨结构"
+          :examples $ []
+        |overview-lanes $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            def overview-lanes $ []
+              {} (:title "|数域的扩张") (:note "|允许新的数与运算进入计算")
+                :ids $ [] |complex-numbers |quaternions
+              {} (:title "|几何代数") (:note "|把方向、面积与变换写入同一种代数")
+                :ids $ [] |grassmann |clifford-algebra
+              {} (:title "|时空与物理") (:note "|让对称性成为描述自然规律的语言")
+                :ids $ [] |minkowski-spacetime |spinor |dirac-equation
+          :examples $ []
         |related-knowledge-nodes $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defn related-knowledge-nodes (id)
@@ -428,10 +662,183 @@
                         str (:relation edge) "| " arrow "| " $ :label other
                 if (empty? labels) "|暂无直接关系" $ join-str labels "|　/　"
           :examples $ []
+        |section-links-text $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defn section-links-text (section)
+              let
+                  links $ or (:links section) ([])
+                  labels $ map links
+                    fn (id)
+                      let
+                          doc $ get knowledge-docs id
+                          target $ find-knowledge-node id
+                        or (:title doc) (:label target) id
+                join-str labels "| · "
+          :examples $ []
+        |space-dimension-label $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defn space-dimension-label (doc)
+              let
+                  id $ :id doc
+                cond
+                    contains? (#{} |real-numbers) id
+                    , |1D
+                  (contains? (#{} |complex-numbers |complex-plane-section |complex-multiplication |complex-structure |argand-plane |imaginary-unit |euler-formula |wessel-argand-gauss) id)
+                    , |2D
+                  (contains? (#{} |quaternions |quaternion-rotation |quaternion-use |computer-graphics |robotics |so3 |su2) id)
+                    , "|3D 旋转"
+                  (contains? (#{} |minkowski-spacetime |spacetime-unification |hyperbolic-rotation |spacetime-fields |lorentz-transform |maxwell-field |dirac-equation |dirac-square-root) id)
+                    , "|4D 时空"
+                  (contains? (#{} |exterior-algebra |wedge-product |inner-product |geometric-product |clifford-algebra |reflection |rotor |spinor |conformal-geometric-algebra) id)
+                    , "|nD 可扩展"
+                  true "|结构维度"
+          :examples $ []
+        |style-history-caption $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-history-caption $ {}
+              |& $ {} (:margin-top |1px) (:font-size |11px) (:font-weight |680) (:color |#50647f)
+          :examples $ []
+        |style-history-connector $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-history-connector $ {}
+              |& $ {} (:display |flex) (:align-items |center) (:justify-content |center) (:flex "|0 0 10px") (:margin "|0 1px") (:font-size |10px) (:font-weight |700) (:color |#b4c3d4)
+          :examples $ []
+        |style-history-connector-group $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-history-connector-group $ {}
+              |& $ {} (:display |flex) (:align-items |center) (:justify-content |center) (:flex "|0 0 42px") (:margin "|0 2px") (:font-size |9px) (:font-weight |720) (:letter-spacing |0.03em) (:color |#91a6c0) (:white-space |nowrap)
+          :examples $ []
+        |style-history-era $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-history-era $ {}
+              |& $ {} (:font-family "|ui-monospace, SFMono-Regular, Menlo, monospace") (:font-size |9px) (:font-weight |650) (:letter-spacing |0.06em) (:color |#9aacbf) (:white-space |nowrap) (:overflow |hidden) (:text-overflow |ellipsis)
+          :examples $ []
+        |style-history-item $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-history-item $ {}
+              |& $ {} (:display |flex) (:align-items |center) (:flex "|0 0 auto") (:min-width |0px)
+          :examples $ []
+        |style-history-kicker $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-history-kicker $ {}
+              |& $ {} (:font-size |9px) (:font-weight |760) (:letter-spacing |0.15em) (:color |#91a5bd)
+          :examples $ []
+        |style-history-label $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-history-label $ {}
+              |& $ {} (:margin-top |0px) (:font-size |11px) (:font-weight |720) (:line-height |1.25) (:white-space |nowrap) (:overflow |hidden) (:text-overflow |ellipsis)
+          :examples $ []
+        |style-history-map-toggle $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-history-map-toggle $ {}
+              |& $ {} (:flex "|0 0 auto") (:padding "|5px 7px") (:border "|1px solid #cbdff4") (:border-radius |6px) (:background |#ffffff) (:color |#3b6895) (:font-size |10px) (:font-weight |700) (:letter-spacing |.06em) (:cursor |pointer)
+          :examples $ []
+        |style-history-node $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-history-node $ {}
+              |& $ {} (:flex "|0 0 auto") (:min-width |0px) (:padding "|4px 6px") (:border "|1px solid #dfeaf6") (:border-radius |6px) (:background "|rgba(255,255,255,.72)") (:text-align |left) (:color |#64758d) (:cursor |pointer) (:transition "|background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease") (:outline |none) (:display |flex) (:align-items |center) (:gap |4px)
+              |&:hover $ {} (:transform "|translateY(-1px)") (:border-color |#bfd5ef) (:background |#ffffff) (:box-shadow "|0 6px 16px rgba(89, 125, 170, .09)")
+          :examples $ []
+        |style-history-node-current $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-history-node-current $ {}
+              |& $ {} (:border-color |#9fc3ef) (:background "|linear-gradient(145deg, #ffffff, #eef6ff)") (:color |#34587f) (:box-shadow "|0 0 0 2px rgba(152, 194, 242, .16), 0 7px 18px rgba(83, 125, 176, .10)")
+          :examples $ []
+        |style-history-node-visited $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-history-node-visited $ {}
+              |& $ {} (:background |#f7fbff) (:border-color |#d2e2f3) (:color |#71859e)
+          :examples $ []
+        |style-history-overview $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-history-overview $ {}
+              |& $ {} (:display |flex) (:align-items |center) (:gap |5px) (:flex "|0 0 116px") (:min-width |116px) (:padding-left |2px) (:white-space |nowrap)
+          :examples $ []
+        |style-history-timeline $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-history-timeline $ {}
+              |& $ {} (:grid-column "|1 / -1") (:display |flex) (:align-items |center) (:gap |12px) (:min-height |52px) (:box-sizing |border-box) (:padding "|6px 14px") (:background "|rgba(250, 253, 255, .90)") (:border-bottom "|1px solid #dce9f6") (:box-shadow "|0 8px 28px rgba(82, 117, 166, .06)") (:backdrop-filter "|blur(18px)") (:z-index |10)
+          :examples $ []
+        |style-history-track $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-history-track $ {}
+              |& $ {} (:display |flex) (:align-items |center) (:flex |1) (:min-width |0px) (:overflow-x |auto) (:padding "|2px 0 4px")
+          :examples $ []
+        |style-overview-card $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-card $ {}
+              |& $ {} (:width |100%) (:padding |14px) (:border "|1px solid #dce8f4") (:border-radius |9px) (:background |#ffffff) (:color |#334b68) (:text-align |left) (:cursor |pointer) (:transition "|transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease")
+              |&:hover $ {} (:transform "|translateY(-2px)") (:border-color |#afd2f5) (:box-shadow "|0 10px 22px rgba(74, 125, 181, .12)")
+          :examples $ []
+        |style-overview-card-era $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-card-era $ {}
+              |& $ {} (:font-size |10px) (:font-weight |720) (:letter-spacing |.08em) (:color |#7190b1)
+          :examples $ []
+        |style-overview-card-list $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-card-list $ {}
+              |& $ {} (:display |flex) (:flex-direction |column) (:gap |10px)
+          :examples $ []
+        |style-overview-card-summary $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-card-summary $ {}
+              |& $ {} (:font-size |12px) (:line-height |1.55) (:color |#62768e)
+          :examples $ []
+        |style-overview-card-title $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-card-title $ {}
+              |& $ {} (:margin "|4px 0 6px") (:font-size |16px) (:font-weight |720) (:color |#2a4c70)
+          :examples $ []
+        |style-overview-lane $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-lane $ {}
+              |& $ {} (:min-height |430px) (:padding |18px) (:border "|1px solid #d8e7f5") (:border-radius |12px) (:background "|rgba(255,255,255,.72)") (:box-shadow "|0 12px 32px rgba(83, 119, 165, .07)")
+          :examples $ []
+        |style-overview-lane-note $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-lane-note $ {}
+              |& $ {} (:margin "|5px 0 15px") (:font-size |12px) (:line-height |1.45) (:color |#71839a)
+          :examples $ []
+        |style-overview-lane-title $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-lane-title $ {}
+              |& $ {} (:font-size |17px) (:font-weight |720) (:color |#294b70)
+          :examples $ []
+        |style-overview-map $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-map $ {}
+              |& $ {} (:position |fixed) (:top |52px) (:right |0px) (:bottom |0px) (:left |0px) (:z-index |20) (:box-sizing |border-box) (:overflow-y |auto) (:padding "|26px 32px 36px") (:background "|linear-gradient(135deg, #f6fbff 0%, #fbf9ff 52%, #f2fcfb 100%)") (:color |#263650)
+          :examples $ []
+        |style-overview-map-close $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-map-close $ {}
+              |& $ {} (:padding "|8px 11px") (:border "|1px solid #bdd8f4") (:border-radius |7px) (:background |#ffffff) (:color |#3d6a98) (:font-size |12px) (:font-weight |650) (:cursor |pointer)
+          :examples $ []
+        |style-overview-map-grid $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-map-grid $ {}
+              |& $ {} (:display |grid) (:grid-template-columns "|repeat(3, minmax(0, 1fr))") (:gap |16px) (:margin "|0px auto") (:max-width |1500px)
+          :examples $ []
+        |style-overview-map-head $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-map-head $ {}
+              |& $ {} (:display |flex) (:align-items |center) (:justify-content |space-between) (:gap |20px) (:margin "|0 auto 24px") (:max-width |1500px)
+          :examples $ []
+        |style-overview-map-kicker $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-map-kicker $ {}
+              |& $ {} (:font-size |10px) (:font-weight |760) (:letter-spacing |.14em) (:color |#6080a2)
+          :examples $ []
+        |style-overview-map-title $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-map-title $ {}
+              |& $ {} (:margin-top |5px) (:font-size |27px) (:font-weight |720) (:letter-spacing |-.035em) (:color |#1e3858)
+          :examples $ []
         |style-reader-article-head $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defstyle style-reader-article-head $ {}
-              |& $ {} (:max-width |1180px) (:margin |0) (:padding "|8px 0 22px") (:border-bottom "|2px solid #161616")
+              |& $ {} (:max-width |1180px) (:margin |0) (:padding "|8px 0 24px") (:border-bottom "|1px solid #d6e6f7")
           :examples $ []
         |style-reader-article-summary $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
@@ -488,6 +895,26 @@
             defstyle style-reader-detail-title $ {}
               |& $ {} (:margin-top |11px) (:font-size |31px) (:font-weight |770) (:letter-spacing |-0.035em)
           :examples $ []
+        |style-reader-dimension-card $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-reader-dimension-card $ {}
+              |& $ {} (:min-width 0) (:padding "|10px 12px 12px") (:border "|1px solid #d8e6f5") (:border-radius |8px) (:background "|linear-gradient(145deg, rgba(255,255,255,.92), rgba(242,247,255,.84))") (:box-shadow "|0 5px 16px rgba(82,117,166,.06)")
+          :examples $ []
+        |style-reader-dimension-grid $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-reader-dimension-grid $ {}
+              |& $ {} (:display |grid) (:grid-template-columns "|repeat(4, minmax(0, 1fr))") (:gap |8px) (:margin-top |20px)
+          :examples $ []
+        |style-reader-dimension-label $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-reader-dimension-label $ {}
+              |& $ {} (:font-size |10px) (:font-weight |700) (:letter-spacing |0.08em) (:color |#8292aa)
+          :examples $ []
+        |style-reader-dimension-value $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-reader-dimension-value $ {}
+              |& $ {} (:margin-top |5px) (:font-size |14px) (:font-weight |680) (:color |#3c567a) (:white-space |nowrap) (:overflow |hidden) (:text-overflow |ellipsis)
+          :examples $ []
         |style-reader-empty-note $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defstyle style-reader-empty-note $ {}
@@ -506,13 +933,13 @@
         |style-reader-history-button $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defstyle style-reader-history-button $ {}
-              |& $ {} (:width |100%) (:min-height |40px) (:padding "|9px 11px") (:border "|1px solid #c6c6c6") (:border-radius |2px) (:background |#ffffff) (:color |#393939) (:font-size |14px) (:font-weight |600) (:text-align |left) (:cursor |pointer)
-              |&:hover $ {} (:border-color |#0f62fe) (:background |#f4f7ff)
+              |& $ {} (:width |100%) (:min-height |40px) (:padding "|8px 12px") (:border "|1px solid #dce7f3") (:border-radius |8px) (:background "|rgba(255,255,255,.72)") (:color |#53657f) (:font-size |14px) (:font-weight |600) (:text-align |left) (:cursor |pointer)
+              |&:hover $ {} (:border-color |#b8d1f1) (:background |#f6faff)
           :examples $ []
         |style-reader-left $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defstyle style-reader-left $ {}
-              |& $ {} (:height |100vh) (:box-sizing |border-box) (:padding "|18px 14px 28px") (:background |#f2f4f6) (:overflow-y |auto) (:border-right "|1px solid #8d8d8d") (:box-shadow "|3px 0 0 rgba(22,22,22,.05)")
+              |& $ {} (:height |100%) (:box-sizing |border-box) (:padding "|20px 16px 32px") (:background "|rgba(247, 251, 255, .82)") (:overflow-y |auto) (:border-right "|1px solid #d9e7f6") (:box-shadow "|8px 0 30px rgba(85, 119, 166, .07)") (:backdrop-filter "|blur(18px)") (:min-height |0px)
           :examples $ []
         |style-reader-meta $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
@@ -522,13 +949,13 @@
         |style-reader-middle $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defstyle style-reader-middle $ {}
-              |& $ {} (:height |100vh) (:box-sizing |border-box) (:padding "|24px clamp(22px, 2.5vw, 46px) 52px") (:background |#ffffff) (:overflow-y |auto)
+              |& $ {} (:height |100%) (:box-sizing |border-box) (:padding "|24px clamp(24px, 2.5vw, 48px) 48px") (:background "|rgba(255, 255, 255, .76)") (:overflow-y |auto) (:backdrop-filter "|blur(12px)") (:min-height |0px)
           :examples $ []
         |style-reader-nav-button $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defstyle style-reader-nav-button $ {}
-              |& $ {} (:width |100%) (:min-height |44px) (:padding "|10px 12px") (:border "|1px solid #a8a8a8") (:border-left "|4px solid #525252") (:border-radius |2px) (:background |#ffffff) (:box-shadow "|2px 2px 0 rgba(22,22,22,.08)") (:color |#262626) (:font-size |15px) (:font-weight |650) (:text-align |left) (:cursor |pointer) (:transition "|border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease")
-              |&:hover $ {} (:border-color |#0f62fe) (:box-shadow "|3px 3px 0 rgba(15,98,254,.14)") (:transform "|translateX(2px)")
+              |& $ {} (:width |100%) (:min-height |44px) (:padding "|12px 12px") (:border "|1px solid #d7e4f3") (:border-left "|3px solid #aac8ef") (:border-radius |8px) (:background "|rgba(255,255,255,.82)") (:box-shadow "|0 6px 18px rgba(82,117,166,.07)") (:color |#33445f) (:font-size |15px) (:font-weight |650) (:text-align |left) (:cursor |pointer) (:transition "|border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease")
+              |&:hover $ {} (:border-color |#b4cff1) (:box-shadow "|0 10px 22px rgba(82,117,166,.12)") (:transform "|translateY(-1px)")
           :examples $ []
         |style-reader-nav-list $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
@@ -545,16 +972,42 @@
             defstyle style-reader-nav-title $ {}
               |& $ {} (:margin "|0 4px 11px") (:font-size |12px) (:font-weight |720) (:letter-spacing |0.1em) (:color |#8091ab)
           :examples $ []
+        |style-reader-outline-active $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-reader-outline-active $ {}
+              |& $ {} (:background |#f8fbff) (:border-color |#b9d7f6) (:color |#24598c) (:box-shadow "|0 4px 12px rgba(81, 135, 194, .08)")
+          :examples $ []
+        |style-reader-outline-index $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-reader-outline-index $ {}
+              |& $ {} (:flex "|0 0 19px") (:width |19px) (:height |19px) (:border-radius |50%) (:background |#eaf2fb) (:color |#7591af) (:font-size |9px) (:font-weight |700) (:line-height |19px) (:text-align |center)
+          :examples $ []
+        |style-reader-outline-item $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-reader-outline-item $ {}
+              |& $ {} (:display |flex) (:align-items |center) (:gap |7px) (:width |100%) (:padding "|7px 8px") (:border "|1px solid transparent") (:border-radius |7px) (:background |transparent) (:color |#73839a) (:font-size |12px) (:line-height |1.25) (:text-align |left) (:cursor |pointer) (:transition "|background-color 150ms ease, border-color 150ms ease, color 150ms ease")
+              |&:hover $ {} (:background |#ffffff) (:border-color |#d8e6f5) (:color |#435b78)
+          :examples $ []
+        |style-reader-outline-label $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-reader-outline-label $ {}
+              |& $ {} (:overflow |hidden) (:white-space |nowrap) (:text-overflow |ellipsis)
+          :examples $ []
+        |style-reader-outline-list $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-reader-outline-list $ {}
+              |& $ {} (:display |flex) (:flex-direction |column) (:gap |4px) (:margin-top |8px)
+          :examples $ []
         |style-reader-page $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defstyle style-reader-page $ {}
-              |& $ {} (:position |fixed) (:inset 0) (:display |grid) (:grid-template-columns "|272px minmax(680px, 1fr) minmax(340px, 410px)") (:background |#dfe3e8) (:font-family "|Inter, IBM Plex Sans, Segoe UI, -apple-system, sans-serif") (:color |#161616) (:overflow |hidden)
+              |& $ {} (:position |fixed) (:inset 0) (:display |grid) (:grid-template-columns "|272px minmax(680px, 1fr) minmax(340px, 410px)") (:background "|linear-gradient(135deg, #edf5ff 0%, #f7f4ff 48%, #eef9fb 100%)") (:font-family "|Inter, IBM Plex Sans, Segoe UI, -apple-system, sans-serif") (:color |#263650) (:overflow |hidden) (:grid-template-rows "|auto minmax(0, 1fr)")
           :examples $ []
         |style-reader-related-card $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defstyle style-reader-related-card $ {}
-              |& $ {} (:padding "|16px 16px 18px") (:border "|1px solid #a8a8a8") (:border-top "|3px solid #525252") (:border-radius |2px) (:background |#ffffff) (:box-shadow "|2px 2px 0 rgba(22,22,22,.09)") (:text-align |left) (:cursor |pointer) (:transition "|border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease, background-color 140ms ease")
-              |&:hover $ {} (:border-color |#0f62fe) (:border-top-color |#0f62fe) (:background |#f4f7ff) (:box-shadow "|3px 3px 0 rgba(15,98,254,.18)") (:transform "|translateX(-2px)")
+              |& $ {} (:padding "|16px 16px 20px") (:border "|1px solid #d7e5f4") (:border-top "|2px solid #b8d1f2") (:border-radius |8px) (:background "|linear-gradient(145deg, rgba(255,255,255,.94), rgba(245,249,255,.88))") (:box-shadow "|0 8px 24px rgba(82,117,166,.08)") (:text-align |left) (:cursor |pointer) (:transition "|border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, background-color 160ms ease")
+              |&:hover $ {} (:border-color |#afcbef) (:border-top-color |#82aef2) (:background |#f7fbff) (:box-shadow "|0 12px 30px rgba(82,117,166,.13)") (:transform "|translateY(-2px)")
           :examples $ []
         |style-reader-related-cards $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
@@ -579,8 +1032,8 @@
         |style-reader-relation-button $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defstyle style-reader-relation-button $ {}
-              |& $ {} (:display |flex) (:flex-direction |column) (:gap |4px) (:width |100%) (:padding "|11px 12px") (:border "|1px solid #a8a8a8") (:border-left "|4px solid #78a9ff") (:border-radius |2px) (:background |#ffffff) (:box-shadow "|2px 2px 0 rgba(22,22,22,.07)") (:text-align |left) (:cursor |pointer) (:transition "|border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease")
-              |&:hover $ {} (:border-color |#0f62fe) (:transform "|translateX(2px)") (:box-shadow "|3px 3px 0 rgba(15,98,254,.13)")
+              |& $ {} (:display |flex) (:flex-direction |column) (:gap |4px) (:width |100%) (:padding "|12px 12px") (:border "|1px solid #d7e5f4") (:border-left "|3px solid #a9c9f2") (:border-radius |8px) (:background "|rgba(255,255,255,.80)") (:box-shadow "|0 6px 18px rgba(82,117,166,.07)") (:text-align |left) (:cursor |pointer) (:transition "|border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease")
+              |&:hover $ {} (:border-color |#b2cef1) (:transform "|translateY(-1px)") (:box-shadow "|0 10px 24px rgba(82,117,166,.11)")
           :examples $ []
         |style-reader-relation-name $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
@@ -595,23 +1048,48 @@
         |style-reader-right $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defstyle style-reader-right $ {}
-              |& $ {} (:height |100vh) (:box-sizing |border-box) (:padding "|24px 18px 42px") (:background |#f7f7f7) (:border-left "|1px solid #8d8d8d") (:box-shadow "|-3px 0 0 rgba(22,22,22,.04)") (:overflow-y |auto)
+              |& $ {} (:height |100%) (:box-sizing |border-box) (:padding "|24px 20px 40px") (:background "|rgba(248, 251, 255, .82)") (:border-left "|1px solid #d9e7f6") (:box-shadow "|-8px 0 30px rgba(85, 119, 166, .06)") (:overflow-y |auto) (:backdrop-filter "|blur(18px)") (:min-height |0px)
           :examples $ []
         |style-reader-section-active $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defstyle style-reader-section-active $ {}
-              |& $ {} (:border-color |#0f62fe) (:border-left-color |#0f62fe) (:background |#f4f7ff) (:box-shadow "|4px 5px 0 rgba(15,98,254,.20), 0 12px 28px rgba(22,22,22,.08)") (:transform "|translateX(3px)")
+              |& $ {} (:border-color |#a9c9f4) (:border-left-color |#79a9ef) (:background "|linear-gradient(135deg, #f7fbff 0%, #f5f3ff 100%)") (:box-shadow "|0 16px 38px rgba(100, 126, 189, .16), 0 0 0 1px rgba(137,178,238,.12)") (:transform "|translateY(-2px)")
           :examples $ []
         |style-reader-section-card $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defstyle style-reader-section-card $ {}
-              |& $ {} (:width |100%) (:box-sizing |border-box) (:padding "|24px 28px 28px") (:border "|1px solid #a8a8a8") (:border-left "|5px solid #525252") (:border-radius |2px) (:background |#ffffff) (:box-shadow "|2px 3px 0 rgba(22,22,22,.10), 0 8px 22px rgba(22,22,22,.055)") (:text-align |left) (:color |#161616) (:cursor |pointer) (:transition "|border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease, background-color 140ms ease")
-              |&:hover $ {} (:border-color |#0f62fe) (:border-left-color |#0f62fe) (:transform "|translateX(2px)") (:box-shadow "|3px 4px 0 rgba(15,98,254,.15), 0 10px 24px rgba(22,22,22,.08)")
+              |& $ {} (:width |100%) (:box-sizing |border-box) (:padding "|24px 28px 28px") (:border "|1px solid #d8e6f5") (:border-left "|4px solid #b9d3f4") (:border-radius |8px) (:background "|linear-gradient(145deg, rgba(255,255,255,.96), rgba(247,251,255,.90))") (:box-shadow "|0 10px 28px rgba(82, 117, 166, .09), inset 0 1px 0 rgba(255,255,255,.95)") (:text-align |left) (:color |#263650) (:cursor |pointer) (:transition "|border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, background-color 160ms ease")
+              |&:hover $ {} (:border-color |#a9c9f4) (:border-left-color |#82aef2) (:transform "|translateY(-2px)") (:box-shadow "|0 14px 34px rgba(82, 117, 166, .14), 0 0 0 1px rgba(166,203,247,.18)")
+          :examples $ []
+        |style-reader-section-footer $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-reader-section-footer $ {}
+              |& $ {} (:display |flex) (:align-items |baseline) (:gap |10px) (:margin-top |18px) (:padding-top |11px) (:border-top "|1px solid #e8f0f8") (:font-size |12px) (:line-height |1.5) (:color |#8b9bb0)
+          :examples $ []
+        |style-reader-section-footer-label $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-reader-section-footer-label $ {}
+              |& $ {} (:flex-shrink |0) (:font-size |10px) (:font-weight |720) (:letter-spacing |0.11em) (:text-transform |uppercase) (:color |#a2b0c2)
+          :examples $ []
+        |style-reader-section-footer-links $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-reader-section-footer-links $ {}
+              |& $ {} (:overflow |hidden) (:text-overflow |ellipsis) (:white-space |nowrap) (:color |#7e90a8)
           :examples $ []
         |style-reader-section-grid $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defstyle style-reader-section-grid $ {}
-              |& $ {} (:max-width |1180px) (:margin "|18px 0 0") (:display |flex) (:flex-direction |column) (:gap |12px) (:padding-bottom |24px)
+              |& $ {} (:max-width |1180px) (:margin "|16px 0 0") (:display |flex) (:flex-direction |column) (:gap |12px) (:padding-bottom |24px)
+          :examples $ []
+        |style-reader-section-head $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-reader-section-head $ {}
+              |& $ {} (:display |flex) (:align-items |baseline) (:justify-content |space-between) (:gap |18px) (:width |100%)
+          :examples $ []
+        |style-reader-section-heading $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-reader-section-heading $ {}
+              |& $ {} (:display |flex) (:align-items |baseline) (:min-width |0px) (:flex |1)
           :examples $ []
         |style-reader-section-hint $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
@@ -628,15 +1106,20 @@
             defstyle style-reader-section-preview $ {}
               |& $ {} (:margin-top |20px) (:font-size |17px) (:line-height |1.92) (:letter-spacing |0.005em) (:color |#48576c) (:white-space |pre-wrap)
           :examples $ []
+        |style-reader-section-tags $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-reader-section-tags $ {}
+              |& $ {} (:flex-shrink |0) (:max-width |48%) (:font-size |12px) (:font-weight |600) (:line-height |1.5) (:letter-spacing |0.01em) (:text-align |right) (:color |#8295ad)
+          :examples $ []
         |style-reader-section-title $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defstyle style-reader-section-title $ {}
-              |& $ {} (:margin-top |11px) (:font-size |25px) (:font-weight |750) (:letter-spacing |-0.02em) (:line-height |1.3)
+              |& $ {} (:margin-top |0px) (:font-size |25px) (:font-weight |750) (:letter-spacing |-0.02em) (:line-height |1.3)
           :examples $ []
         |style-reader-tag $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defstyle style-reader-tag $ {}
-              |& $ {} (:padding "|4px 7px") (:border-radius |2px) (:background |#e8edf3) (:border "|1px solid #d1d9e2") (:color |#31547d) (:font-size |12px) (:font-weight |620)
+              |& $ {} (:padding "|4px 8px") (:border-radius |6px) (:background "|linear-gradient(135deg, #edf5ff, #f2efff)") (:border "|1px solid #d9e6f5") (:color |#53709a) (:font-size |12px) (:font-weight |620)
           :examples $ []
         |style-reader-tag-row $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote

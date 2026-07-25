@@ -320,6 +320,27 @@ __metadata:
   languageName: node
   linkType: hard
 
+"cirru-color@npm:^0.2.4":
+  version: 0.2.4
+  resolution: "cirru-color@npm:0.2.4"
+  checksum: 10c0/2c4e0e1f01d2304aaa7bffe9c75aea04be7c6ea3f45bc03c86bc50efa9c03bf7d4611d1ec2f613610491bd288adb298f7942bfedcb14595dc4c8bde8dfb77104
+  languageName: node
+  linkType: hard
+
+"copy-text-to-clipboard@npm:^3.2.2":
+  version: 3.2.2
+  resolution: "copy-text-to-clipboard@npm:3.2.2"
+  checksum: 10c0/451796734a380f7da7b0af27c4d94e449719d3a2f2170e99c7e46eeee54cf3c4b4fdeabc185f6d6e8cbdf932e350831d05e8387c4bae8dcedb7fb961c600ddd4
+  languageName: node
+  linkType: hard
+
+"dayjs@npm:^1.11.13":
+  version: 1.11.21
+  resolution: "dayjs@npm:1.11.21"
+  checksum: 10c0/bd97dfdc4bfea3c66268635690313828b386faa040fbc1f829ff42a2bd748b72c9d9b3c8f9616ce9e61fcb78923f1461a462c969c54b1084458ae1b715898fb0
+  languageName: node
+  linkType: hard
+
 "debug@npm:4, debug@npm:^4.3.4":
   version: 4.4.3
   resolution: "debug@npm:4.4.3"
@@ -989,6 +1010,9 @@ __metadata:
   dependencies:
     "@calcit/procs": "npm:^0.12.51"
     bottom-tip: "npm:^0.1.5"
+    cirru-color: "npm:^0.2.4"
+    copy-text-to-clipboard: "npm:^3.2.2"
+    dayjs: "npm:^1.11.13"
     vite: "npm:^8.0.12"
   languageName: unknown
   linkType: soft

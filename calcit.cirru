@@ -6,6 +6,10 @@
   :files $ {}
     |app.comp.container $ %{} :FileEntry
       :defs $ {}
+        |*knowledge-network-instances $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defatom *knowledge-network-instances $ {}
+          :examples $ []
         |card-queue $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defn card-queue (node blueprint)
@@ -55,6 +59,16 @@
                 div ({})
                   comp-knowledge-graph $ >> states :knowledge-graph
                   when dev? $ comp-reel (>> states :reel) reel ({})
+          :examples $ []
+        |comp-global-map-network $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defcomp comp-global-map-network (graph-data)
+              [] (effect-knowledge-network graph-data)
+                div
+                  {} $ :class-name style-overview-network
+                  div
+                    {} $ :class-name style-overview-network-note
+                    <> "|关系网络 · 拖动空白处平移，滚轮缩放；颜色对应数域、四元数、几何代数与时空主线。"
           :examples $ []
         |comp-knowledge-graph $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
@@ -371,36 +385,77 @@
                     div
                       {} $ :class-name style-overview-map-title
                       <> "|从数域扩张到时空结构"
-                    list->
-                      {} $ :class-name style-overview-map-grid
-                      map-indexed overview-lanes $ fn (lane-idx lane)
-                        [] lane-idx $ div
-                          {} $ :class-name style-overview-lane
-                          div
-                            {} $ :class-name style-overview-lane-title
-                            <> $ :title lane
-                          div
-                            {} $ :class-name style-overview-lane-note
-                            <> $ :note lane
-                          list->
-                            {} $ :class-name style-overview-card-list
-                            map-indexed (:ids lane)
-                              fn (idx id)
-                                let
-                                    target $ find-knowledge-node id
-                                  [] idx $ button
-                                    {} (:class-name style-overview-card)
-                                      :on-click $ fn (e d!) (navigate! id d!)
-                                    div
-                                      {} $ :class-name style-overview-card-era
-                                      <> $ :era target
-                                    div
-                                      {} $ :class-name style-overview-card-title
-                                      <> $ :label target
-                                    div
-                                      {} $ :class-name style-overview-card-summary
-                                      <> $ :summary target
+                    div
+                      {} $ :class-name style-overview-map-note
+                      <> $ str "|按四条主线浏览 " (count knowledge-nodes) "| 个知识节点；每张卡片都保留其历史位置、数学角色、空间维度和可继续追踪的关系。"
+                    comp-global-map-network $ knowledge-network-elements
+                    div
+                      {} $ :class-name style-overview-map-summary
+                      span ({}) (<> "|浅蓝：复数与数域")
+                      span ({}) (<> "|浅紫：四元数与旋转")
+                      span ({}) (<> "|浅绿：外代数与几何代数")
+                      span ({}) (<> "|浅橙：时空、旋量与量子")
           :examples $ []
+        |effect-knowledge-network $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defeffect effect-knowledge-network (graph-data) (action el at-place?)
+              when (= action :mount) (fcose cytoscape)
+              when (= action :mount)
+                let
+                    options $ js-object (:container el)
+                      :elements $ to-js-data graph-data
+                      :autoungrabify true
+                      :boxSelectionEnabled false
+                      :style $ to-js-data
+                        concat
+                          [] $ {} (:selector |node)
+                            :style $ {} (:label "|data(label)") (:shape |round-rectangle)
+                          [] $ {} (:selector |node)
+                            :style $ {} (:width 148) (:height 54)
+                          [] $ {} (:selector |node)
+                            :style $ {} (:padding 0) (:font-size |11px)
+                          [] $ {} (:selector |node)
+                            :style $ {} (:font-weight |600) (:text-wrap |wrap)
+                          [] $ {} (:selector |node)
+                            :style $ {} (:text-max-width |110px) (:text-valign |center)
+                          [] $ {} (:selector |node)
+                            :style $ {} (:text-halign |center) (:color |#36506e)
+                          [] $ {} (:selector |node)
+                            :style $ {} (:background-color |#edf6ff) (:border-width |1px)
+                          [] $ {} (:selector |node)
+                            :style $ {} (:border-color |#9fc8ed) (:overlay-opacity |0)
+                          [] $ {} (:selector "|node[domain = 'complex']")
+                            :style $ {} (:background-color |#e8f3ff) (:border-color |#8abcea)
+                          [] $ {} (:selector "|node[domain = 'quaternion']")
+                            :style $ {} (:background-color |#f2edff) (:border-color |#ad98e8)
+                          [] $ {} (:selector "|node[domain = 'geometric']")
+                            :style $ {} (:background-color |#e8f8f2) (:border-color |#8acfb3)
+                          [] $ {} (:selector "|node[domain = 'spacetime']")
+                            :style $ {} (:background-color |#fff3e6) (:border-color |#efb783)
+                          [] $ {} (:selector |edge)
+                            :style $ {} (:width |1.2px) (:line-color |#b9cce0)
+                          [] $ {} (:selector |edge)
+                            :style $ {} (:target-arrow-color |#b9cce0) (:target-arrow-shape |triangle)
+                          [] $ {} (:selector |edge)
+                            :style $ {} (:curve-style |bezier) (:arrow-scale |0.7)
+                          [] $ {} (:selector |edge)
+                            :style $ {} (:opacity |0.72) (:overlay-opacity |0)
+                      :layout $ js-object (:name |fcose) (:animate false) (:fit false) (:padding 96) (:quality |proof) (:nodeRepulsion 90000) (:idealEdgeLength 380) (:edgeElasticity 0.15) (:nodeSeparation 120) (:gravity 0.02) (:gravityRange 3.8) (:numIter 2500) (:tilingPaddingVertical 60) (:tilingPaddingHorizontal 60) (:tile true) (:randomize true) (:nodeDimensionsIncludeLabels true)
+                    cy $ cytoscape options
+                  swap! *knowledge-network-instances $ fn (instances) (assoc instances el cy)
+                  js/window.setTimeout
+                    fn () (.!resize cy) (.!center cy)
+                    , 24
+              when (= action :unmount)
+                let
+                    cy $ get @*knowledge-network-instances el
+                  when (some? cy) (.!destroy cy)
+                    swap! *knowledge-network-instances $ fn (instances) (dissoc instances el)
+          :examples $ []
+          :schema $ :: :fn
+            {} (:return :dynamic)
+              :args $ [] :dynamic
+              :features $ #{} :js-ffi
         |find-card-blueprint $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defn find-card-blueprint (id) (get knowledge-docs id)
@@ -410,6 +465,20 @@
             defn find-knowledge-node (id)
               find knowledge-nodes $ fn (node)
                 = id $ :id node
+          :examples $ []
+        |graph-domain-key $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defn graph-domain-key (doc)
+              let
+                  id $ :id doc
+                cond
+                    contains? (#{} |real-numbers |complex-numbers |complex-origin |complex-equations |complex-plane-section |complex-multiplication |complex-structure |imaginary-unit |argand-plane |cardano-casus |bombelli-algebra |wessel-argand-gauss |euler-formula |fundamental-theorem-algebra) id
+                    , |complex
+                  (contains? (#{} |quaternions |quaternion-problem |quaternion-product |quaternion-rotation |quaternion-use |hamilton |noncommutativity |so3 |su2 |robotics |computer-graphics) id)
+                    , |quaternion
+                  (contains? (#{} |minkowski-spacetime |spacetime-unification |hyperbolic-rotation |spacetime-fields |lorentz-transform |maxwell-field |dirac-equation |dirac-square-root |quantum-spin) id)
+                    , |spacetime
+                  true |geometric
           :examples $ []
         |history-milestone-era $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
@@ -490,6 +559,26 @@
                       :target $ :target relation
                       :relation $ :label relation
                       :kind $ :kind relation
+          :examples $ []
+        |knowledge-network-elements $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defn knowledge-network-elements () $ concat
+              map knowledge-nodes $ fn (doc)
+                {} $ :data
+                  {}
+                    :id $ :id doc
+                    :label $ :label doc
+                    :era $ :era doc
+                    :domain $ graph-domain-key doc
+                    :kind $ kind-label (:kind doc)
+              map knowledge-edges $ fn (edge)
+                {} $ :data
+                  {}
+                    :id $ str (:source edge) "|→" (:target edge)
+                    :source $ :source edge
+                    :target $ :target edge
+                    :label $ :relation edge
+                    :kind $ :kind edge
           :examples $ []
         |knowledge-nodes $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
@@ -617,12 +706,14 @@
         |overview-lanes $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             def overview-lanes $ []
-              {} (:title "|数域的扩张") (:note "|允许新的数与运算进入计算")
-                :ids $ [] |complex-numbers |quaternions
-              {} (:title "|几何代数") (:note "|把方向、面积与变换写入同一种代数")
-                :ids $ [] |grassmann |clifford-algebra
-              {} (:title "|时空与物理") (:note "|让对称性成为描述自然规律的语言")
-                :ids $ [] |minkowski-spacetime |spinor |dirac-equation
+              {} (:title "|复数与数域扩张") (:note "|从方程障碍、虚数单位到复平面与旋转的统一语言")
+                :ids $ [] |real-numbers |cardano-casus |bombelli-algebra |imaginary-unit |complex-origin |complex-numbers |complex-equations |fundamental-theorem-algebra |euler-formula |wessel-argand-gauss |argand-plane |complex-structure |complex-multiplication
+              {} (:title "|四元数与旋转群") (:note "|非交换乘法如何组织三维旋转、姿态与计算实现")
+                :ids $ [] |hamilton |quaternion-problem |quaternions |quaternion-product |noncommutativity |quaternion-rotation |quaternion-use |so3 |su2 |robotics |computer-graphics
+              {} (:title "|外代数与几何代数") (:note "|方向、面积、度量和变换怎样进入统一代数结构")
+                :ids $ [] |grassmann |exterior-algebra |wedge-product |inner-product |geometric-product |geometric-product-card |clifford |clifford-algebra |reflection |rotor |conformal-geometric-algebra |frobenius-theorem |vector-analysis-debate
+              {} (:title "|时空、旋量与量子") (:note "|由不定度量、Lorentz 对称性走向 Dirac 方程与物理解释")
+                :ids $ [] |minkowski-spacetime |hyperbolic-rotation |lorentz-transform |maxwell-field |spacetime-unification |spacetime-fields |spinor |cartan-spinors |dirac-square-root |dirac-equation |quantum-spin |clifford-physics |clifford-synthesis
           :examples $ []
         |related-knowledge-nodes $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
@@ -767,7 +858,7 @@
         |style-overview-card $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defstyle style-overview-card $ {}
-              |& $ {} (:width |100%) (:padding |14px) (:border "|1px solid #dce8f4") (:border-radius |9px) (:background |#ffffff) (:color |#334b68) (:text-align |left) (:cursor |pointer) (:transition "|transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease")
+              |& $ {} (:width |100%) (:padding |12px) (:border "|1px solid #dce8f4") (:border-radius |9px) (:background |#ffffff) (:color |#334b68) (:text-align |left) (:cursor |pointer) (:transition "|transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease")
               |&:hover $ {} (:transform "|translateY(-2px)") (:border-color |#afd2f5) (:box-shadow "|0 10px 22px rgba(74, 125, 181, .12)")
           :examples $ []
         |style-overview-card-era $ %{} :CodeEntry (:doc |) (:schema :dynamic)
@@ -779,6 +870,21 @@
           :code $ quote
             defstyle style-overview-card-list $ {}
               |& $ {} (:display |flex) (:flex-direction |column) (:gap |10px)
+          :examples $ []
+        |style-overview-card-meta $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-card-meta $ {}
+              |& $ {} (:display |flex) (:align-items |center) (:justify-content |space-between) (:gap |6px) (:font-size |10px) (:font-weight |700) (:letter-spacing |.04em) (:color |#7190b1)
+          :examples $ []
+        |style-overview-card-metric $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-card-metric $ {}
+              |& $ {} (:padding "|3px 5px") (:border-radius |4px) (:background |#eff5fb)
+          :examples $ []
+        |style-overview-card-metrics $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-card-metrics $ {}
+              |& $ {} (:display |flex) (:flex-wrap |wrap) (:gap |4px) (:margin-top |9px) (:font-size |10px) (:color |#66809d)
           :examples $ []
         |style-overview-card-summary $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
@@ -793,7 +899,7 @@
         |style-overview-lane $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defstyle style-overview-lane $ {}
-              |& $ {} (:min-height |430px) (:padding |18px) (:border "|1px solid #d8e7f5") (:border-radius |12px) (:background "|rgba(255,255,255,.72)") (:box-shadow "|0 12px 32px rgba(83, 119, 165, .07)")
+              |& $ {} (:min-height |0px) (:padding |15px) (:border "|1px solid #d8e7f5") (:border-radius |12px) (:background "|rgba(255,255,255,.72)") (:box-shadow "|0 12px 32px rgba(83, 119, 165, .07)")
           :examples $ []
         |style-overview-lane-note $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
@@ -818,7 +924,7 @@
         |style-overview-map-grid $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defstyle style-overview-map-grid $ {}
-              |& $ {} (:display |grid) (:grid-template-columns "|repeat(3, minmax(0, 1fr))") (:gap |16px) (:margin "|0px auto") (:max-width |1500px)
+              |& $ {} (:display |grid) (:grid-template-columns "|repeat(4, minmax(240px, 1fr))") (:gap |14px) (:margin "|0px auto") (:max-width |1740px)
           :examples $ []
         |style-overview-map-head $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
@@ -830,10 +936,30 @@
             defstyle style-overview-map-kicker $ {}
               |& $ {} (:font-size |10px) (:font-weight |760) (:letter-spacing |.14em) (:color |#6080a2)
           :examples $ []
+        |style-overview-map-note $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-map-note $ {}
+              |& $ {} (:margin "|4px auto 18px") (:max-width |1740px) (:font-size |13px) (:line-height |1.45) (:color |#667d98)
+          :examples $ []
+        |style-overview-map-summary $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-map-summary $ {}
+              |& $ {} (:display |flex) (:gap |10px) (:flex-wrap |wrap) (:max-width |1740px) (:margin "|0 auto 10px") (:color |#6e86a2) (:font-size |13px)
+          :examples $ []
         |style-overview-map-title $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defstyle style-overview-map-title $ {}
               |& $ {} (:margin-top |5px) (:font-size |27px) (:font-weight |720) (:letter-spacing |-.035em) (:color |#1e3858)
+          :examples $ []
+        |style-overview-network $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-network $ {}
+              |& $ {} (:height "|calc(100vh - 176px)") (:min-height |760px) (:margin "|0 auto 16px") (:max-width |1740px) (:border "|1px solid #d7e7f5") (:border-radius |12px) (:background "|rgba(255,255,255,.78)") (:box-shadow "|0 10px 30px rgba(83, 119, 165, .07)") (:overflow |hidden) (:position |relative)
+          :examples $ []
+        |style-overview-network-note $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-overview-network-note $ {}
+              |& $ {} (:position |absolute) (:top |12px) (:left |14px) (:z-index |2) (:padding "|5px 7px") (:border "|1px solid rgba(193, 216, 238, .84)") (:border-radius |5px) (:background "|rgba(250,253,255,.90)") (:color |#607a98) (:font-size |11px) (:pointer-events |none)
           :examples $ []
         |style-reader-article-head $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
@@ -1231,10 +1357,12 @@
         :code $ quote
           ns app.comp.container $ :require
             respo.css :refer $ defstyle
-            respo.core :refer $ defcomp <> >> div button span list->
+            respo.core :refer $ defcomp defeffect <> >> div button span list->
             reel.comp.reel :refer $ comp-reel
             app.config :refer $ dev?
             respo-md.comp.md :refer $ comp-md-block
+            |cytoscape :default cytoscape
+            |cytoscape-fcose :default fcose
     |app.config $ %{} :FileEntry
       :defs $ {}
         |dev? $ %{} :CodeEntry (:doc |) (:schema :dynamic)

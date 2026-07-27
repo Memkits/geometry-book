@@ -886,8 +886,7 @@
         |load-knowledge-docs $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defmacro load-knowledge-docs () $ let
-                paths $ filter (read-dir |content true)
-                  fn (path) (not= path |content/README.md)
+                paths $ [] |content/argand-plane.md |content/bombelli-algebra.md |content/cardano-casus.md |content/cartan-spinors.md |content/clifford-algebra.md |content/clifford-physics.md |content/clifford-synthesis.md |content/clifford.md |content/complex-equations.md |content/complex-multiplication.md |content/complex-numbers.md |content/complex-origin.md |content/complex-plane.md |content/complex-structure.md |content/computer-graphics.md |content/conformal-geometric-algebra.md |content/dirac-equation.md |content/dirac-square-root.md |content/euler-formula.md |content/exterior-algebra.md |content/frobenius-theorem.md |content/fundamental-theorem-algebra.md |content/geometric-product-card.md |content/geometric-product.md |content/grassmann.md |content/hamilton.md |content/hyperbolic-rotation.md |content/imaginary-unit.md |content/inner-product.md |content/lorentz-transform.md |content/maxwell-field.md |content/minkowski-spacetime.md |content/noncommutativity.md |content/quantum-spin.md |content/quaternion-problem.md |content/quaternion-product.md |content/quaternion-rotation.md |content/quaternion-use.md |content/quaternions.md |content/real-numbers.md |content/reflection.md |content/robotics.md |content/rotor.md |content/so3.md |content/spacetime-fields.md |content/spacetime-unification.md |content/spinor.md |content/su2.md |content/vector-analysis-debate.md |content/wedge-product.md |content/wessel-argand-gauss.md
                 pairs $ map paths
                   fn (path)
                     let

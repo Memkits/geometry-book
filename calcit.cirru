@@ -70,6 +70,81 @@
                     {} $ :class-name style-overview-network-note
                     <> "|关系网络 · 拖动空白处平移，滚轮缩放；颜色对应数域、四元数、几何代数与时空主线。"
           :examples $ []
+        |comp-heatmap-view $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defcomp comp-heatmap-view (state cursor)
+              div
+                {} $ :class-name style-overview-map
+                div
+                  {} $ :class-name style-overview-map-head
+                  div
+                    {} $ :class-name style-overview-map-kicker
+                    <> |HEATMAP
+                  button
+                    {} (:class-name style-overview-map-close)
+                      :on-click $ fn (e d!)
+                        d! cursor $ assoc state :view :reader
+                    <> "|返回阅读"
+                div
+                  {} $ :class-name style-overview-map-title
+                  <> "|领域 × 历史阶段的知识覆盖"
+                div
+                  {} $ :class-name style-overview-map-note
+                  <> "|颜色深浅表示该领域在该阶段已有的关键卡片数量；点击方格进入该组最早的卡片。"
+                div
+                  {} $ :class-name style-heatmap-board
+                  div
+                    {} $ :class-name style-heatmap-head-row
+                    div
+                      {} $ :class-name style-heatmap-row-label
+                      <> "|领域 / 阶段"
+                    list-> ({})
+                      map-indexed historical-stages $ fn (idx stage)
+                        [] (:id stage)
+                          div
+                            {} $ :class-name style-heatmap-head
+                            <> $ :era stage
+                  list->
+                    {} $ :class-name style-heatmap-rows
+                    map-indexed heatmap-domains $ fn (domain-idx domain)
+                      [] (:key domain)
+                        div
+                          {} $ :class-name style-heatmap-row
+                          div
+                            {} $ :class-name style-heatmap-row-label
+                            <> $ :label domain
+                          list-> ({})
+                            map-indexed historical-stages $ fn (stage-idx stage)
+                              let
+                                  matches $ filter knowledge-nodes
+                                    fn (doc)
+                                      and
+                                        = (graph-domain-key doc) (:key domain)
+                                        some? $ find (:ids stage)
+                                          fn (id)
+                                            = id $ :id doc
+                                  target $ first matches
+                                  amount $ count matches
+                                []
+                                  str (:key domain) |- $ :id stage
+                                  button
+                                    {}
+                                      :class-name $ str-spaced style-heatmap-cell
+                                        if (= amount 0) style-heatmap-cell-empty $ if (= amount 1) style-heatmap-cell-light
+                                          if (= amount 2) style-heatmap-cell-medium style-heatmap-cell-strong
+                                      :title $ str (:label domain) "| · " (:era stage)
+                                      :on-click $ fn (e d!)
+                                        when (some? target)
+                                          d! cursor $ assoc
+                                            assoc (assoc state :view :reader) :selected $ :id target
+                                            , :active-section |history
+                                    div
+                                      {} $ :class-name style-heatmap-count
+                                      <> $ str amount
+                                    div
+                                      {} $ :class-name style-heatmap-caption
+                                      <> $ if (= amount 0) "|暂无卡片" "|点击浏览"
+          :examples $ []
         |comp-knowledge-graph $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defcomp comp-knowledge-graph (states)
@@ -151,11 +226,35 @@
                                 true $ span
                                   {} $ :class-name style-history-connector
                                   <> "|→"
-                    button
-                      {} (:class-name style-history-map-toggle)
-                        :on-click $ fn (e d!)
-                          d! cursor $ assoc state :view :map
-                      <> |MAP
+                    div
+                      {} $ :class-name style-history-view-switcher
+                      button
+                        {}
+                          :class-name $ if
+                            = (:view state) :map
+                            str-spaced style-history-view-toggle style-history-view-toggle-active
+                            , style-history-view-toggle
+                          :on-click $ fn (e d!)
+                            d! cursor $ assoc state :view :map
+                        <> |MAP
+                      button
+                        {}
+                          :class-name $ if
+                            = (:view state) :timeline
+                            str-spaced style-history-view-toggle style-history-view-toggle-active
+                            , style-history-view-toggle
+                          :on-click $ fn (e d!)
+                            d! cursor $ assoc state :view :timeline
+                        <> |TIME
+                      button
+                        {}
+                          :class-name $ if
+                            = (:view state) :heatmap
+                            str-spaced style-history-view-toggle style-history-view-toggle-active
+                            , style-history-view-toggle
+                          :on-click $ fn (e d!)
+                            d! cursor $ assoc state :view :heatmap
+                        <> |HEAT
                   div
                     {} $ :class-name style-reader-left
                     div
@@ -395,6 +494,124 @@
                       span ({}) (<> "|浅紫：四元数与旋转")
                       span ({}) (<> "|浅绿：外代数与几何代数")
                       span ({}) (<> "|浅橙：时空、旋量与量子")
+                  when
+                    = (:view state) :timeline
+                    comp-timeline-view state cursor
+                  when
+                    = (:view state) :heatmap
+                    comp-heatmap-view state cursor
+          :examples $ []
+        |comp-timeline-view $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defcomp comp-timeline-view (state cursor)
+              div
+                {} $ :class-name style-overview-map
+                div
+                  {} $ :class-name style-overview-map-head
+                  div
+                    {} $ :class-name style-overview-map-kicker
+                    <> |TIMELINE
+                  button
+                    {} (:class-name style-overview-map-close)
+                      :on-click $ fn (e d!)
+                        d! cursor $ assoc state :view :reader
+                    <> "|返回阅读"
+                div
+                  {} $ :class-name style-overview-map-title
+                  <> "|数学如何一步步抵达时空结构"
+                div
+                  {} $ :class-name style-overview-map-note
+                  <> "|不是年代名录：沿时间脊柱观察每一代人面对的问题、分出的数学路线，以及哪些结构被带入下一阶段。"
+                div
+                  {} $ :class-name style-timeline-board
+                  list->
+                    {} $ :class-name style-timeline-vertical
+                    map-indexed historical-stages $ fn (stage-idx stage)
+                      [] (:id stage)
+                        div
+                          {} $ :class-name style-timeline-stage
+                          div
+                            {} $ :class-name style-timeline-stage-era
+                            <> $ :era stage
+                          div
+                            {} $ :class-name style-timeline-stage-marker
+                            <> $ str |0 (+ stage-idx 1)
+                          div
+                            {} $ :class-name style-timeline-stage-content
+                            div
+                              {} $ :class-name style-timeline-stage-head
+                              div
+                                {} $ :class-name style-timeline-stage-title
+                                <> $ :title stage
+                              div
+                                {} $ :class-name style-timeline-stage-count
+                                <> $ str
+                                  count $ :ids stage
+                                  , "|个知识节点"
+                            div
+                              {} $ :class-name style-timeline-narrative
+                              div
+                                {} $ :class-name style-timeline-narrative-label
+                                <> "|问题"
+                              div
+                                {} $ :class-name style-timeline-narrative-text
+                                <> $ :question stage
+                              div
+                                {} $ :class-name style-timeline-narrative-label
+                                <> "|结构性突破"
+                              div
+                                {} $ :class-name style-timeline-narrative-text
+                                <> $ :breakthrough stage
+                            list->
+                              {} $ :class-name style-timeline-branches
+                              map-indexed (:branches stage)
+                                fn (branch-idx branch)
+                                  [] (:title branch)
+                                    div
+                                      {} $ :class-name style-timeline-branch
+                                      div
+                                        {} $ :class-name style-timeline-branch-head
+                                        span
+                                          {} $ :class-name style-timeline-branch-index
+                                          <> $ str |0 (+ branch-idx 1)
+                                        div
+                                          {} $ :class-name style-timeline-branch-title
+                                          <> $ :title branch
+                                      div
+                                        {} $ :class-name style-timeline-branch-note
+                                        <> $ :note branch
+                                      list->
+                                        {} $ :class-name style-timeline-event-list
+                                        map-indexed (:ids branch)
+                                          fn (card-idx id)
+                                            let
+                                                target $ find-knowledge-node id
+                                              [] id $ button
+                                                {} (:class-name style-timeline-event)
+                                                  :on-click $ fn (e d!)
+                                                    d! cursor $ assoc (assoc state :view :reader) :selected id
+                                                div
+                                                  {} $ :class-name style-timeline-event-order
+                                                  <> $ str |0 (+ card-idx 1)
+                                                div
+                                                  {} $ :class-name style-timeline-event-body
+                                                  div
+                                                    {} $ :class-name style-timeline-event-meta
+                                                    <> $ str
+                                                      kind-label $ :kind target
+                                                      , "| · " (:era target)
+                                                  div
+                                                    {} $ :class-name style-timeline-event-title
+                                                    <> $ :label target
+                                                  div
+                                                    {} $ :class-name style-timeline-event-summary
+                                                    <> $ :summary target
+                            div
+                              {} $ :class-name style-timeline-handoff
+                              span
+                                {} $ :class-name style-timeline-handoff-label
+                                <> "|带向下一阶段"
+                              <> $ :handoff stage
           :examples $ []
         |effect-knowledge-network $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -479,6 +696,61 @@
                   (contains? (#{} |minkowski-spacetime |spacetime-unification |hyperbolic-rotation |spacetime-fields |lorentz-transform |maxwell-field |dirac-equation |dirac-square-root |quantum-spin) id)
                     , |spacetime
                   true |geometric
+          :examples $ []
+        |heatmap-domains $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            def heatmap-domains $ []
+              {} (:key |complex) (:label "|数域与复数")
+              {} (:key |quaternion) (:label "|四元数与旋转")
+              {} (:key |geometric) (:label "|外代数与几何")
+              {} (:key |spacetime) (:label "|时空与量子")
+          :examples $ []
+        |historical-stages $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            def historical-stages $ []
+              {} (:id |origins) (:era "|1545—1798") (:title "|代数中的数系压力") (:question "|当公式为了求出实数答案却必须穿过负数平方根，什么才算合法的数？") (:breakthrough "|把对象的合法性从直观可测转向运算规则的一致、封闭与可检验。") (:handoff "|复数先作为必要的中间语言出现；下一步才是为这套算术寻找空间解释。")
+                :ids $ [] |real-numbers |complex-equations |cardano-casus |bombelli-algebra |imaginary-unit
+                :branches $ []
+                  {} (:title "|方程支线") (:note "|三次方程的通用公式暴露出不可约情形：只许实数的中间步骤反而无法完成求解。Cardano公开公式，Bombelli把虚量的计算规则写稳。")
+                    :ids $ [] |cardano-casus |bombelli-algebra |complex-equations
+                  {} (:title "|数域支线") (:note "|负数曾经也不被承认；虚数的争议由此逼迫数学家区分“符号能否出现”与“运算系统能否自洽”。")
+                    :ids $ [] |real-numbers |imaginary-unit
+              {} (:id |complex) (:era "|1799—1842") (:title "|复数获得平面与结构") (:question "|若a+bi不是数轴上的点，它究竟在描述位置、方向，还是一种对平面的作用？") (:breakthrough "|把复数看成平面有向量后，乘法同时成为缩放与旋转；代数规则第一次直接说明空间动作。") (:handoff "|二维旋转可以交换；三维旋转的先后顺序却不能，这迫使下一代人改变代数公理。")
+                :ids $ [] |wessel-argand-gauss |argand-plane |complex-numbers |complex-multiplication |euler-formula |fundamental-theorem-algebra |complex-plane-section
+                :branches $ []
+                  {} (:title "|几何表示支线") (:note "|Wessel的测量实践、Argand的独立论文与Gauss的系统化命名，让虚数单位成为平面中四分之一转动，而非无法解释的符号。")
+                    :ids $ [] |wessel-argand-gauss |argand-plane |complex-plane-section
+                  {} (:title "|旋转与相位支线") (:note "|极坐标把模长和辐角拆开；Euler公式说明连续旋转可由普通乘法复合，因而连接振动、波与相位。")
+                    :ids $ [] |complex-numbers |complex-multiplication |euler-formula
+                  {} (:title "|代数闭包支线") (:note "|代数学基本定理把“每个多项式都能找到根”变成复数域的结构事实，复数由技巧升级为自然工作场所。")
+                    :ids $ [] |fundamental-theorem-algebra
+              {} (:id |algebra) (:era "|1843—1879") (:title "|三维旋转的代数分叉") (:question "|能否像复数编码平面旋转那样，用乘法编码三维方向、面积、体积与旋转顺序？") (:breakthrough "|Hamilton接受非交换，Grassmann把方向推广为有向子空间，Clifford再把二次型与外积放到同一乘法中。") (:handoff "|这里产生的不是唯一胜者，而是三条可互译的语言：四元数、向量/外代数与Clifford代数。")
+                :ids $ [] |hamilton |quaternion-problem |quaternions |quaternion-product |noncommutativity |quaternion-rotation |grassmann |exterior-algebra |wedge-product |inner-product |clifford |clifford-algebra |geometric-product
+                :branches $ []
+                  {} (:title "|Hamilton支线：旋转次序") (:note "|三元数失败说明维数和公理不能任意挑选。四元数以一个额外实维数换来封闭，并以ij=-ji保存先后旋转的差异。")
+                    :ids $ [] |hamilton |quaternion-problem |quaternions |quaternion-product |noncommutativity |quaternion-rotation
+                  {} (:title "|Grassmann支线：子空间与取向") (:note "|向量不只相加；两个向量还能生成有向面积，三个向量生成有向体积。外积的反交换性记录了交换基向量会翻转取向。")
+                    :ids $ [] |grassmann |exterior-algebra |wedge-product |inner-product
+                  {} (:title "|Clifford支线：度量重新接回几何") (:note "|仅有外积不能测长度。Clifford以v²=Q(v)把二次型装进乘法，使内积与外积成为同一几何积的不同部分。")
+                    :ids $ [] |clifford |clifford-algebra |geometric-product
+              {} (:id |spacetime) (:era "|1880—1919") (:title "|从空间向时空：变换成为主角") (:question "|当电磁规律与Galilei时空不兼容，哪些量应该随观察者改变，哪些量必须保持不变？") (:breakthrough "|从“物体在绝对空间中的运动”转为“观察者如何分解同一四维事件结构”；不变量与变换群成为核心。") (:handoff "|时空几何不仅改写电磁场，也要求物质的量子态按旋量而非普通向量变换。")
+                :ids $ [] |vector-analysis-debate |maxwell-field |lorentz-transform |hyperbolic-rotation |minkowski-spacetime |spacetime-unification |cartan-spinors |spinor
+                :branches $ []
+                  {} (:title "|电磁与记号支线") (:note "|Maxwell方程催生了实用的向量分析。Gibbs与Heaviside拆出点积和叉积，计算更简洁，却让四元数的统一乘法暂时退到背景。")
+                    :ids $ [] |vector-analysis-debate |maxwell-field
+                  {} (:title "|相对论支线") (:note "|Lorentz变换起初服务于电磁理论；Poincaré识别群结构，Einstein重写同时性，Minkowski则把保持不变的间隔看作真正的几何对象。")
+                    :ids $ [] |lorentz-transform |hyperbolic-rotation |minkowski-spacetime |spacetime-unification
+                  {} (:title "|表示论支线") (:note "|Cartan研究正交群表示时发现旋量：它不是普通箭头，而是旋转群双重覆盖上的对象，720度才完全复原其相位。")
+                    :ids $ [] |cartan-spinors |spinor
+              {} (:id |physics) (:era "|1920—今天") (:title "|旋量、场与可计算几何") (:question "|如果时空对称是基础，电子、自旋、场和工程中的姿态，分别应当用什么对象来表示？") (:breakthrough "|Clifford关系线性化时空二次型，Dirac方程把旋量带入量子物质；旋转代数同时进入机器人、图形和航天。") (:handoff "|从数系扩张到时空结构的主线仍未封闭：量子场与可弯曲时空如何统一，仍是开放问题。")
+                :ids $ [] |dirac-square-root |dirac-equation |clifford-physics |quantum-spin |su2 |so3 |rotor |reflection |robotics |computer-graphics |conformal-geometric-algebra
+                :branches $ []
+                  {} (:title "|量子物质支线") (:note "|Pauli矩阵、SU(2)与Diracγ矩阵说明自旋不是经典小球自转。把能量动量关系开平方，会强制出现反对易生成元与旋量态。")
+                    :ids $ [] |dirac-square-root |dirac-equation |clifford-physics |quantum-spin |su2
+                  {} (:title "|旋转群支线") (:note "|SO(3)描述可见的三维旋转，SU(2)是其双重覆盖。rotor以共轭作用旋转向量，避免欧拉角奇异并保留组合次序。")
+                    :ids $ [] |so3 |rotor |reflection
+                  {} (:title "|工程与计算支线") (:note "|四元数和几何代数不只是历史遗产：姿态估计、传感器融合、骨骼动画、相机控制与共形模型仍在直接使用它们。")
+                    :ids $ [] |robotics |computer-graphics |conformal-geometric-algebra
           :examples $ []
         |history-milestone-era $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
@@ -784,6 +1056,72 @@
                     , "|nD 可扩展"
                   true "|结构维度"
           :examples $ []
+        |style-heatmap-board $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-heatmap-board $ {}
+              |& $ {} (:max-width |1480px) (:margin "|24px auto") (:border "|1px solid #d6e5f4") (:border-radius |10px) (:background "|rgba(255,255,255,.72)") (:padding |16px) (:overflow-x |auto)
+          :examples $ []
+        |style-heatmap-caption $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-heatmap-caption $ {}
+              |& $ {} (:margin-top |5px) (:font-size |11px) (:color |#7891aa)
+          :examples $ []
+        |style-heatmap-cell $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-heatmap-cell $ {}
+              |& $ {} (:min-height |92px) (:border "|1px solid #bdd7ee") (:border-radius |8px) (:background |#edf7ff) (:color |#356284) (:cursor |pointer)
+              |&:hover $ {} (:background |#dff1ff) (:border-color |#7eb5e6)
+          :examples $ []
+        |style-heatmap-cell-empty $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-heatmap-cell-empty $ {}
+              |& $ {} (:background |#fbfdff) (:border-color |#e1ebf5) (:color |#9aabbb)
+          :examples $ []
+        |style-heatmap-cell-light $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-heatmap-cell-light $ {}
+              |& $ {} (:background |#eff8ff) (:border-color |#c4def3)
+          :examples $ []
+        |style-heatmap-cell-medium $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-heatmap-cell-medium $ {}
+              |& $ {} (:background |#dcefff) (:border-color |#a5cee9)
+          :examples $ []
+        |style-heatmap-cell-strong $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-heatmap-cell-strong $ {}
+              |& $ {} (:background |#c1e1f8) (:border-color |#7db8df) (:color |#24567d)
+          :examples $ []
+        |style-heatmap-count $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-heatmap-count $ {}
+              |& $ {} (:font-size |28px) (:font-weight |700) (:line-height |1.1)
+          :examples $ []
+        |style-heatmap-head $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-heatmap-head $ {}
+              |& $ {} (:padding |10px) (:color |#637f9d) (:font-size |12px) (:font-weight |700) (:text-align |center)
+          :examples $ []
+        |style-heatmap-head-row $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-heatmap-head-row $ {}
+              |& $ {} (:display |grid) (:grid-template-columns "|170px repeat(5, minmax(150px, 1fr))") (:gap |8px) (:min-width |950px)
+          :examples $ []
+        |style-heatmap-row $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-heatmap-row $ {}
+              |& $ {} (:display |grid) (:grid-template-columns "|170px repeat(5, minmax(150px, 1fr))") (:gap |8px)
+          :examples $ []
+        |style-heatmap-row-label $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-heatmap-row-label $ {}
+              |& $ {} (:display |flex) (:align-items |center) (:padding |10px) (:color |#3d5d7d) (:font-size |13px) (:font-weight |700)
+          :examples $ []
+        |style-heatmap-rows $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-heatmap-rows $ {}
+              |& $ {} (:display |flex) (:flex-direction |column) (:gap |8px) (:margin-top |8px) (:min-width |950px)
+          :examples $ []
         |style-history-caption $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
             defstyle style-history-caption $ {}
@@ -854,6 +1192,22 @@
           :code $ quote
             defstyle style-history-track $ {}
               |& $ {} (:display |flex) (:align-items |center) (:flex |1) (:min-width |0px) (:overflow-x |auto) (:padding "|2px 0 4px")
+          :examples $ []
+        |style-history-view-switcher $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-history-view-switcher $ {}
+              |& $ {} (:display |flex) (:gap |6px) (:margin-left |12px)
+          :examples $ []
+        |style-history-view-toggle $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-history-view-toggle $ {}
+              |& $ {} (:border "|1px solid #c9dcee") (:border-radius |7px) (:background |#f8fbff) (:color |#547391) (:padding "|6px 9px") (:font-size |11px) (:font-weight |700) (:letter-spacing |0.4px) (:cursor |pointer)
+              |&:hover $ {} (:background |#eef7ff) (:color |#2e67a1)
+          :examples $ []
+        |style-history-view-toggle-active $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-history-view-toggle-active $ {}
+              |& $ {} (:border "|1px solid #83b5e8") (:background |#e1f0ff) (:color |#1f5e99) (:box-shadow "|0 2px 7px rgba(63, 125, 190, .16)")
           :examples $ []
         |style-overview-card $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote
@@ -1251,6 +1605,148 @@
           :code $ quote
             defstyle style-reader-tag-row $ {}
               |& $ {} (:display |flex) (:flex-wrap |wrap) (:gap |7px) (:margin-top |18px)
+          :examples $ []
+        |style-timeline-board $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-board $ {}
+              |& $ {} (:max-width |1180px) (:margin "|0 auto") (:padding "|18px 10px 54px")
+          :examples $ []
+        |style-timeline-branch $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-branch $ {}
+              |& $ {} (:padding "|14px 15px 15px") (:border "|1px solid #d7e6f3") (:border-radius |10px) (:background "|rgba(255,255,255,.78)") (:box-shadow "|0 6px 20px rgba(79,120,163,.05)")
+          :examples $ []
+        |style-timeline-branch-head $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-branch-head $ {}
+              |& $ {} (:display |flex) (:align-items |center) (:gap |8px) (:margin-bottom |7px)
+          :examples $ []
+        |style-timeline-branch-index $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-branch-index $ {}
+              |& $ {} (:display |inline-flex) (:align-items |center) (:justify-content |center) (:width |20px) (:height |20px) (:border-radius |5px) (:background |#e8f3fd) (:font-size |10px) (:font-weight |800) (:color |#5c8bb8)
+          :examples $ []
+        |style-timeline-branch-note $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-branch-note $ {}
+              |& $ {} (:margin "|0 0 11px") (:font-size |13px) (:line-height |1.62) (:color |#5d748c)
+          :examples $ []
+        |style-timeline-branch-title $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-branch-title $ {}
+              |& $ {} (:font-size |16px) (:font-weight |760) (:color |#315779)
+          :examples $ []
+        |style-timeline-branches $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-branches $ {}
+              |& $ {} (:display |flex) (:flex-direction |column) (:gap |12px)
+          :examples $ []
+        |style-timeline-event $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-event $ {}
+              |& $ {} (:display |grid) (:grid-template-columns "|30px minmax(0, 1fr)") (:column-gap |10px) (:width |100%) (:padding "|13px 14px") (:box-sizing |border-box) (:border "|1px solid #d7e6f4") (:border-radius |9px) (:background "|rgba(255, 255, 255, .84)") (:color |#334b68) (:text-align |left) (:cursor |pointer) (:transition "|transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease")
+              |&:hover $ {} (:transform "|translateY(-2px)") (:border-color |#9dc8ee) (:box-shadow "|0 10px 22px rgba(74, 125, 181, .11)")
+          :examples $ []
+        |style-timeline-event-body $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-event-body $ {}
+              |& $ {} (:min-width |0)
+          :examples $ []
+        |style-timeline-event-list $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-event-list $ {}
+              |& $ {} (:display |grid) (:grid-template-columns "|repeat(2, minmax(0, 1fr))") (:gap |10px)
+          :examples $ []
+        |style-timeline-event-meta $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-event-meta $ {}
+              |& $ {} (:overflow |hidden) (:margin-bottom |3px) (:font-size |11px) (:font-weight |650) (:color |#7391ae) (:text-overflow |ellipsis) (:white-space |nowrap)
+          :examples $ []
+        |style-timeline-event-order $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-event-order $ {}
+              |& $ {} (:padding-top |2px) (:font-size |11px) (:font-weight |800) (:letter-spacing |0.3px) (:color |#82a6c8)
+          :examples $ []
+        |style-timeline-event-summary $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-event-summary $ {}
+              |& $ {} (:display |-webkit-box) (:overflow |hidden) (:font-size |12px) (:line-height |1.52) (:color |#637991) (:-webkit-line-clamp |2) (:-webkit-box-orient |vertical)
+          :examples $ []
+        |style-timeline-event-title $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-event-title $ {}
+              |& $ {} (:margin-bottom |5px) (:font-size |16px) (:font-weight |740) (:color |#2d5277)
+          :examples $ []
+        |style-timeline-handoff $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-handoff $ {}
+              |& $ {} (:margin-top |12px) (:padding "|11px 14px") (:border-radius |8px) (:background |#f1f8ff) (:font-size |13px) (:line-height |1.55) (:color |#51708d)
+          :examples $ []
+        |style-timeline-handoff-label $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-handoff-label $ {}
+              |& $ {} (:margin-right |10px) (:font-size |11px) (:font-weight |800) (:letter-spacing |0.35px) (:color |#3e78a9)
+          :examples $ []
+        |style-timeline-narrative $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-narrative $ {}
+              |& $ {} (:display |grid) (:grid-template-columns "|96px minmax(0,1fr)") (:column-gap |12px) (:row-gap |7px) (:margin-bottom |16px) (:padding "|13px 15px") (:border-left "|3px solid #b8d8f3") (:border-radius |0px) (:background "|rgba(249,252,255,.72)")
+          :examples $ []
+        |style-timeline-narrative-label $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-narrative-label $ {}
+              |& $ {} (:padding-top |1px) (:font-size |11px) (:font-weight |800) (:letter-spacing |0.5px) (:color |#5d85ad)
+          :examples $ []
+        |style-timeline-narrative-text $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-narrative-text $ {}
+              |& $ {} (:font-size |13px) (:line-height |1.65) (:color |#48627d)
+          :examples $ []
+        |style-timeline-stage $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-stage $ {}
+              |& $ {} (:position |relative) (:display |grid) (:grid-template-columns "|112px 52px minmax(0, 1fr)") (:column-gap |14px) (:padding-bottom |32px)
+          :examples $ []
+        |style-timeline-stage-content $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-stage-content $ {}
+              |& $ {} (:min-width |0) (:padding-bottom |4px)
+          :examples $ []
+        |style-timeline-stage-count $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-stage-count $ {}
+              |& $ {} (:flex "|0 0 auto") (:font-size |12px) (:font-weight |650) (:color |#7290ad)
+          :examples $ []
+        |style-timeline-stage-era $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-stage-era $ {}
+              |& $ {} (:padding-top |12px) (:font-size |13px) (:font-weight |740) (:letter-spacing |0.4px) (:color |#5880a8) (:text-align |right)
+          :examples $ []
+        |style-timeline-stage-head $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-stage-head $ {}
+              |& $ {} (:display |flex) (:align-items |baseline) (:justify-content |space-between) (:gap |16px) (:margin "|5px 0 12px")
+          :examples $ []
+        |style-timeline-stage-marker $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-stage-marker $ {}
+              |& $ {} (:position |relative) (:z-index |1) (:display |flex) (:align-items |center) (:justify-content |center) (:width |36px) (:height |36px) (:margin-top |2px) (:box-sizing |border-box) (:border "|2px solid #94c4ec") (:border-radius |50%) (:background |#f8fcff) (:font-size |11px) (:font-weight |800) (:color |#3474ac) (:box-shadow "|0 0 0 5px rgba(247, 251, 255, .8)")
+          :examples $ []
+        |style-timeline-stage-title $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-stage-title $ {}
+              |& $ {} (:font-size |22px) (:font-weight |750) (:letter-spacing |-0.3px) (:color |#294c70)
+          :examples $ []
+        |style-timeline-stages $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-stages $ {}
+              |& $ {} (:display |grid) (:grid-template-columns "|repeat(5, minmax(245px, 1fr))") (:gap |14px) (:min-width |1320px)
+          :examples $ []
+        |style-timeline-vertical $ %{} :CodeEntry (:doc |) (:schema :dynamic)
+          :code $ quote
+            defstyle style-timeline-vertical $ {}
+              |& $ {} (:position |relative) (:display |flex) (:flex-direction |column) (:gap |0)
+              |&:before $ {} (:position |absolute) (:top |28px) (:bottom |36px) (:left |138px) (:width |2px) (:background |#c7ddf3) (:content "|\"")
           :examples $ []
         |validate-knowledge-docs! $ %{} :CodeEntry (:doc |) (:schema :dynamic)
           :code $ quote

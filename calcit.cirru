@@ -12,16 +12,48 @@
             defatom *knowledge-network-instances $ {}
           :examples $ []
           :schema $ :: 'Dynamic
+        |build-doc-pair $ %{} 'CodeEntry (:doc |)
+          :code $ quote
+            defn build-doc-pair (path)
+              let
+                  lines $ split-lines (read-file path)
+                  closing-index $ inc
+                    option:unwrap-or
+                      find-index (rest lines)
+                        fn (line) (= line |---)
+                      , -1
+                  metadata $ unsafe-coerce
+                    parse-cirru-edn $ join-str (slice lines 1 closing-index) "|\n"
+                    , 'Dynamic
+                  body $ join-str
+                    slice lines (inc closing-index) (count lines)
+                    , "|\n"
+                  doc $ assoc
+                    assoc
+                      assoc (assoc metadata :content body) :source path
+                      , :id $ option:unwrap-or (get metadata :id) nil
+                    , :label
+                      option:unwrap-or (get metadata :title) nil
+                []
+                  option:unwrap-or (get doc :id) nil
+                  , doc
+          :examples $ []
+          :schema $ :: 'Fn
+            {} (:return 'List)
+              :args $ [] 'String
         |card-queue $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn card-queue (node blueprint)
-              if (some? blueprint)
+              if (option:some? blueprint)
                 let
-                    queue $ option:unwrap-or (get blueprint :queue) ([])
-                  if (empty? queue) (markdown-chapter-cards blueprint)
+                    queue $ option:unwrap-or
+                      get (option:unwrap blueprint) :queue
+                      []
+                  if (empty? queue)
+                    markdown-chapter-cards $ option:unwrap blueprint
                     filter
                       map queue $ fn (id) (get knowledge-docs id)
-                      , some?
+                      , option:some?
                 knowledge-sections node
           :examples $ []
           :schema $ :: 'Dynamic
@@ -44,23 +76,35 @@
                         card $ find-card-blueprint id
                         relation-info $ find related-items
                           fn (item)
-                            = id $ :id item
+                            = id $ option:unwrap-or (get item :id) nil
                       {} (:id id)
-                        :label $ :label node
-                        :summary $ :summary node
-                        :kind $ kind-label (:kind node)
-                        :relation $ or (:relation relation-info) "|相关线索"
-                        :direction $ or (:direction relation-info) "|↗"
-                        :tags $ or (:tags card)
-                          #{} $ kind-label (:kind node)
+                        :label $ option:unwrap-or
+                          get (option:unwrap-or node nil) :label
+                          , nil
+                        :summary $ option:unwrap-or
+                          get (option:unwrap-or node nil) :summary
+                          , nil
+                        :kind $ kind-label
+                          option:unwrap-or
+                            get (option:unwrap-or node nil) :kind
+                            , nil
+                        :relation $ option:unwrap-or
+                          get (option:unwrap-or relation-info nil) :relation
+                          , "|相关线索"
+                        :direction $ option:unwrap-or
+                          get (option:unwrap-or relation-info nil) :direction
+                          , "|↗"
+                        :tags $ option:unwrap-or (get card :tags)
+                          #{} $ kind-label
+                            option:unwrap-or (get node :kind) nil
           :examples $ []
           :schema $ :: 'Dynamic
         |comp-container $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defcomp comp-container (reel)
               let
-                  store $ :store reel
-                  states $ :states store
+                  store $ option:unwrap-or (get reel :store) ({})
+                  states $ option:unwrap-or (get store :states) ({})
                 div ({})
                   comp-knowledge-graph $ >> states :knowledge-graph
                   when dev? $ comp-reel (>> states :reel) reel ({})
@@ -107,43 +151,58 @@
                       <> "|领域 / 阶段"
                     list-> ({})
                       map-indexed historical-stages $ fn (idx stage)
-                        [] (:id stage)
+                        []
+                          option:unwrap-or (get stage :id) nil
                           div
                             {} $ :class-name style-heatmap-head
-                            <> $ :era stage
+                            <> $ str
+                              option:unwrap-or (get stage :era) nil
                   list->
                     {} $ :class-name style-heatmap-rows
                     map-indexed heatmap-domains $ fn (domain-idx domain)
-                      [] (:key domain)
+                      []
+                        option:unwrap-or (get domain :key) nil
                         div
                           {} $ :class-name style-heatmap-row
                           div
                             {} $ :class-name style-heatmap-row-label
-                            <> $ :label domain
+                            <> $ str
+                              option:unwrap-or (get domain :label) nil
                           list-> ({})
                             map-indexed historical-stages $ fn (stage-idx stage)
                               let
                                   matches $ filter knowledge-nodes
                                     fn (doc)
                                       and
-                                        = (graph-domain-key doc) (:key domain)
-                                        some? $ find (:ids stage)
+                                        = (graph-domain-key doc)
+                                          option:unwrap-or (get domain :key) nil
+                                        option:some? $ find
+                                          option:unwrap-or (get stage :ids) nil
                                           fn (id)
-                                            = id $ :id doc
+                                            = id $ option:unwrap-or
+                                              get doc $ turn-tag |id
+                                              , nil
                                   target $ first matches
                                   amount $ count matches
                                 []
-                                  str (:key domain) |- $ :id stage
+                                  str
+                                    option:unwrap-or (get domain :key) nil
+                                    , |- $ option:unwrap-or (get stage :id) nil
                                   button
                                     {}
                                       :class-name $ str-spaced style-heatmap-cell
                                         if (= amount 0) style-heatmap-cell-empty $ if (= amount 1) style-heatmap-cell-light
                                           if (= amount 2) style-heatmap-cell-medium style-heatmap-cell-strong
-                                      :title $ str (:label domain) "| · " (:era stage)
+                                      :title $ str
+                                        option:unwrap-or (get domain :label) nil
+                                        , "| · "
+                                          option:unwrap-or (get stage :era) nil
                                       :on-click $ fn (e d!)
-                                        when (some? target)
+                                        when (option:some? target)
                                           d! cursor $ assoc
-                                            assoc (assoc state :view :reader) :selected $ :id target
+                                            assoc (assoc state :view :reader) :selected $ option:unwrap-or
+                                              get (option:unwrap-or target nil) :id
+                                              , nil
                                             , :active-section |history
                                     div
                                       {} $ :class-name style-heatmap-count
@@ -157,29 +216,42 @@
           :code $ quote
             defcomp comp-knowledge-graph (states)
               let
-                  cursor $ :cursor states
-                  state $ or (:data states)
+                  cursor $ option:unwrap-or (get states :cursor) ([])
+                  state $ option:unwrap-or (get states :data)
                     {} (:selected |complex-numbers) (:active-section |history)
                       :history $ []
-                  selected-id $ or (:selected state) |complex-numbers
-                  node $ or (find-knowledge-node selected-id) (first knowledge-nodes)
+                  selected-id $ or
+                    option:unwrap-or (get state :selected) nil
+                    , |complex-numbers
+                  node $ option:unwrap-or (find-knowledge-node selected-id)
+                    option:unwrap-or (first knowledge-nodes) nil
                   blueprint $ find-card-blueprint selected-id
                   sections $ card-queue node blueprint
-                  requested-id $ or (:active-section state)
-                    :id $ first sections
-                  active-section $ or
+                  requested-id $ or
+                    option:unwrap-or (get state :active-section) nil
+                    :id $ option:unwrap-or
+                      get
+                        option:unwrap-or (first sections) nil
+                        , :id
+                      , nil
+                  active-section $ option:unwrap-or
                     find sections $ fn (section)
-                      = requested-id $ :id section
-                    first sections
-                  active-id $ :id active-section
-                  visit-history $ or (:history state) ([])
-                  map-view? $ = (:view state) :map
+                      = requested-id $ option:unwrap-or (get section :id) nil
+                    option:unwrap-or (first sections) nil
+                  active-id $ option:unwrap-or (get active-section :id) nil
+                  visit-history $ or
+                    option:unwrap-or (get state :history) nil
+                    []
+                  map-view? $ =
+                    option:unwrap-or (get state :view) nil
+                    , :map
                   related $ card-recommendations selected-id active-section blueprint
-                  timeline-active-id $ or
+                  timeline-active-id $ option:unwrap-or
                     find history-timeline-ids $ fn (id) (= id selected-id)
-                    find history-timeline-ids $ fn (id)
-                      = id $ :parent blueprint
-                    , selected-id
+                    option:unwrap-or
+                      find history-timeline-ids $ fn (id)
+                        = id $ option:unwrap-or (get blueprint :parent) nil
+                      , selected-id
                   navigate! $ fn (target-id d!)
                     d! cursor $ {} (:selected target-id) (:active-section |history)
                       :history $ take-last
@@ -205,7 +277,7 @@
                         let
                             target $ find-knowledge-node id
                             current? $ = id timeline-active-id
-                            visited? $ some?
+                            visited? $ option:some?
                               find visit-history $ fn (visited-id) (= visited-id id)
                           [] idx $ div
                             {} $ :class-name style-history-item
@@ -219,7 +291,8 @@
                                 <> $ history-milestone-era id
                               div
                                 {} $ :class-name style-history-label
-                                <> $ :label target
+                                <> $ str
+                                  option:unwrap-or (get target :label) nil
                             when
                               < idx $ dec (count history-timeline-ids)
                               cond
@@ -239,7 +312,9 @@
                       button
                         {}
                           :class-name $ if
-                            = (:view state) :map
+                            =
+                              option:unwrap-or (get state :view) nil
+                              , :map
                             str-spaced style-history-view-toggle style-history-view-toggle-active
                             , style-history-view-toggle
                           :on-click $ fn (e d!)
@@ -248,7 +323,9 @@
                       button
                         {}
                           :class-name $ if
-                            = (:view state) :timeline
+                            =
+                              option:unwrap-or (get state :view) nil
+                              , :timeline
                             str-spaced style-history-view-toggle style-history-view-toggle-active
                             , style-history-view-toggle
                           :on-click $ fn (e d!)
@@ -257,7 +334,9 @@
                       button
                         {}
                           :class-name $ if
-                            = (:view state) :heatmap
+                            =
+                              option:unwrap-or (get state :view) nil
+                              , :heatmap
                             str-spaced style-history-view-toggle style-history-view-toggle-active
                             , style-history-view-toggle
                           :on-click $ fn (e d!)
@@ -290,17 +369,19 @@
                           [] idx $ button
                             {}
                               :class-name $ if
-                                = active-id $ :id section
+                                = active-id $ option:unwrap-or (get section :id) nil
                                 str-spaced style-reader-outline-item style-reader-outline-active
                                 , style-reader-outline-item
                               :on-click $ fn (e d!)
-                                d! cursor $ assoc state :active-section (:id section)
+                                d! cursor $ assoc state :active-section
+                                  option:unwrap-or (get section :id) nil
                             span
                               {} $ :class-name style-reader-outline-index
                               <> $ str |0 (+ idx 1)
                             span
                               {} $ :class-name style-reader-outline-label
-                              <> $ :title section
+                              <> $ str
+                                option:unwrap-or (get section :title) nil
                     div
                       {} $ :class-name style-reader-nav-section
                       div
@@ -314,7 +395,8 @@
                                 target $ find-knowledge-node id
                               [] idx $ button
                                 {} (:class-name style-reader-nav-button)
-                                  :inner-text $ :label target
+                                  :inner-text $ str
+                                    option:unwrap-or (get target :label) nil
                                   :on-click $ fn (e d!) (navigate! id d!)
                     div
                       {} $ :class-name style-reader-nav-section
@@ -334,7 +416,8 @@
                                   target $ find-knowledge-node id
                                 [] idx $ button
                                   {} (:class-name style-reader-history-button)
-                                    :inner-text $ str "|←" | (:label target)
+                                    :inner-text $ str "|←" |
+                                      option:unwrap-or (get target :label) nil
                                     :on-click $ fn (e d!) (navigate! id d!)
                     div
                       {} $ :class-name style-reader-nav-section
@@ -347,13 +430,16 @@
                           [] idx $ button
                             {} (:class-name style-reader-relation-button)
                               :on-click $ fn (e d!)
-                                navigate! (:id item) d!
+                                navigate!
+                                  option:unwrap-or (get item :id) nil
+                                  , d!
                             span
                               {} $ :class-name style-reader-relation-tag
                               <> "|关系"
                             span
                               {} $ :class-name style-reader-relation-name
-                              <> $ :label item
+                              <> $ str
+                                option:unwrap-or (get item :label) nil
                   div
                     {} $ :class-name style-reader-middle
                     div
@@ -361,17 +447,21 @@
                       div
                         {} $ :class-name style-reader-meta
                         <> $ str
-                          kind-label $ :kind node
-                          , "|　·　" (:era node)
+                          kind-label $ option:unwrap-or (get node :kind) nil
+                          , "|　·　"
+                            option:unwrap-or (get node :era) nil
                       div
                         {} $ :class-name style-reader-article-title
-                        <> $ :label node
+                        <> $ str
+                          option:unwrap-or (get node :label) nil
                       div
                         {} $ :class-name style-reader-article-summary
-                        <> $ :summary node
+                        <> $ str
+                          option:unwrap-or (get node :summary) nil
                       div
                         {} $ :class-name style-reader-formula
-                        <> $ :formula node
+                        <> $ str
+                          option:unwrap-or (get node :formula) nil
                       list->
                         {} $ :class-name style-reader-dimension-grid
                         map-indexed (knowledge-dimensions node)
@@ -380,16 +470,18 @@
                               {} $ :class-name style-reader-dimension-card
                               div
                                 {} $ :class-name style-reader-dimension-label
-                                <> $ :label dimension
+                                <> $ str
+                                  option:unwrap-or (get dimension :label) nil
                               div
                                 {} $ :class-name style-reader-dimension-value
-                                <> $ :value dimension
+                                <> $ str
+                                  option:unwrap-or (get dimension :value) nil
                       when
-                        some? $ :tags blueprint
+                        option:some? $ get blueprint :tags
                         list->
                           {} $ :class-name style-reader-tag-row
                           map-indexed
-                            .to-list $ :tags blueprint
+                            .to-list $ option:unwrap-or (get blueprint :tags) (#{})
                             fn (idx tag)
                               [] idx $ span
                                 {} $ :class-name style-reader-tag
@@ -400,11 +492,12 @@
                         [] idx $ button
                           {}
                             :class-name $ if
-                              = active-id $ :id section
+                              = active-id $ option:unwrap-or (get section :id) nil
                               str-spaced style-reader-section-card style-reader-section-active
                               , style-reader-section-card
                             :on-click $ fn (e d!)
-                              d! cursor $ assoc state :active-section (:id section)
+                              d! cursor $ assoc state :active-section
+                                option:unwrap-or (get section :id) nil
                           div
                             {} $ :class-name style-reader-section-head
                             div
@@ -414,21 +507,26 @@
                                 <> $ str |0 (+ idx 1)
                               div
                                 {} $ :class-name style-reader-section-title
-                                <> $ :title section
+                                <> $ str
+                                  option:unwrap-or (get section :title) nil
                             div
                               {} $ :class-name style-reader-section-tags
                               <> $ str |#
                                 join-str
-                                  .to-list $ or (:tags section) (#{} "|文章")
+                                  .to-list $ or
+                                    option:unwrap-or (get section :tags) nil
+                                    #{} "|文章"
                                   , "|　#"
                           div
                             {} $ :class-name style-reader-section-preview
                             comp-md-block
-                              markdown-body-without-title $ :content section
+                              markdown-body-without-title $ option:unwrap-or (get section :content) nil
                               {}
                           when
                             not $ empty?
-                              or (:links section) ([])
+                              or
+                                option:unwrap-or (get section :links) nil
+                                []
                             div
                               {} $ :class-name style-reader-section-footer
                               span
@@ -447,31 +545,42 @@
                       <> "|关系与推荐"
                     div
                       {} $ :class-name style-reader-detail-hint
-                      <> $ str "|基于“" (:title active-section) "|”的链接、标签与知识边生成"
+                      <> $ str "|基于“"
+                        option:unwrap-or (get active-section :title) nil
+                        , "|”的链接、标签与知识边生成"
                     list->
                       {} $ :class-name style-reader-related-cards
                       map-indexed related $ fn (idx item)
                         [] idx $ button
                           {} (:class-name style-reader-related-card)
                             :on-click $ fn (e d!)
-                              navigate! (:id item) d!
+                              navigate!
+                                option:unwrap-or (get item :id) nil
+                                , d!
                           div
                             {} $ :class-name style-reader-related-relation
-                            <> $ str (:direction item) "|  " (:relation item) "|  ·  " (:kind item)
+                            <> $ str
+                              option:unwrap-or (get item :direction) nil
+                              , "|  "
+                                option:unwrap-or (get item :relation) nil
+                                , "|  ·  "
+                                  option:unwrap-or (get item :kind) nil
                           div
                             {} $ :class-name style-reader-related-title
-                            <> $ :label item
+                            <> $ str
+                              option:unwrap-or (get item :label) nil
                           div
                             {} $ :class-name style-reader-related-summary
-                            <> $ :summary item
+                            <> $ str
+                              option:unwrap-or (get item :summary) nil
                           when
-                            some? $ :tags item
+                            option:some? $ get item :tags
                             div
                               {} $ :class-name style-reader-tag-row
                               list-> ({})
                                 map-indexed
                                   take
-                                    .to-list $ :tags item
+                                    .to-list $ option:unwrap-or (get item :tags) (#{})
                                     , 4
                                   fn (tag-idx tag)
                                     [] tag-idx $ span
@@ -503,10 +612,14 @@
                       span ({}) (<> "|浅绿：外代数与几何代数")
                       span ({}) (<> "|浅橙：时空、旋量与量子")
                   when
-                    = (:view state) :timeline
+                    =
+                      option:unwrap-or (get state :view) nil
+                      , :timeline
                     comp-timeline-view state cursor
                   when
-                    = (:view state) :heatmap
+                    =
+                      option:unwrap-or (get state :view) nil
+                      , :heatmap
                     comp-heatmap-view state cursor
           :examples $ []
           :schema $ :: 'Dynamic
@@ -536,12 +649,14 @@
                   list->
                     {} $ :class-name style-timeline-vertical
                     map-indexed historical-stages $ fn (stage-idx stage)
-                      [] (:id stage)
+                      []
+                        option:unwrap-or (get stage :id) nil
                         div
                           {} $ :class-name style-timeline-stage
                           div
                             {} $ :class-name style-timeline-stage-era
-                            <> $ :era stage
+                            <> $ str
+                              option:unwrap-or (get stage :era) nil
                           div
                             {} $ :class-name style-timeline-stage-marker
                             <> $ str |0 (+ stage-idx 1)
@@ -551,11 +666,12 @@
                               {} $ :class-name style-timeline-stage-head
                               div
                                 {} $ :class-name style-timeline-stage-title
-                                <> $ :title stage
+                                <> $ str
+                                  option:unwrap-or (get stage :title) nil
                               div
                                 {} $ :class-name style-timeline-stage-count
                                 <> $ str
-                                  count $ :ids stage
+                                  count $ option:unwrap-or (get stage :ids) (#{})
                                   , "|个知识节点"
                             div
                               {} $ :class-name style-timeline-narrative
@@ -564,18 +680,22 @@
                                 <> "|问题"
                               div
                                 {} $ :class-name style-timeline-narrative-text
-                                <> $ :question stage
+                                <> $ str
+                                  option:unwrap-or (get stage :question) nil
                               div
                                 {} $ :class-name style-timeline-narrative-label
                                 <> "|结构性突破"
                               div
                                 {} $ :class-name style-timeline-narrative-text
-                                <> $ :breakthrough stage
+                                <> $ str
+                                  option:unwrap-or (get stage :breakthrough) nil
                             list->
                               {} $ :class-name style-timeline-branches
-                              map-indexed (:branches stage)
+                              map-indexed
+                                option:unwrap-or (get stage :branches) nil
                                 fn (branch-idx branch)
-                                  [] (:title branch)
+                                  []
+                                    option:unwrap-or (get branch :title) nil
                                     div
                                       {} $ :class-name style-timeline-branch
                                       div
@@ -585,13 +705,16 @@
                                           <> $ str |0 (+ branch-idx 1)
                                         div
                                           {} $ :class-name style-timeline-branch-title
-                                          <> $ :title branch
+                                          <> $ str
+                                            option:unwrap-or (get branch :title) nil
                                       div
                                         {} $ :class-name style-timeline-branch-note
-                                        <> $ :note branch
+                                        <> $ str
+                                          option:unwrap-or (get branch :note) nil
                                       list->
                                         {} $ :class-name style-timeline-event-list
-                                        map-indexed (:ids branch)
+                                        map-indexed
+                                          option:unwrap-or (get branch :ids) ([])
                                           fn (card-idx id)
                                             let
                                                 target $ find-knowledge-node id
@@ -607,20 +730,24 @@
                                                   div
                                                     {} $ :class-name style-timeline-event-meta
                                                     <> $ str
-                                                      kind-label $ :kind target
-                                                      , "| · " (:era target)
+                                                      kind-label $ option:unwrap-or (get target :kind) nil
+                                                      , "| · "
+                                                        option:unwrap-or (get target :era) nil
                                                   div
                                                     {} $ :class-name style-timeline-event-title
-                                                    <> $ :label target
+                                                    <> $ str
+                                                      option:unwrap-or (get target :label) nil
                                                   div
                                                     {} $ :class-name style-timeline-event-summary
-                                                    <> $ :summary target
+                                                    <> $ str
+                                                      option:unwrap-or (get target :summary) nil
                             div
                               {} $ :class-name style-timeline-handoff
                               span
                                 {} $ :class-name style-timeline-handoff-label
                                 <> "|带向下一阶段"
-                              <> $ :handoff stage
+                              <> $ str
+                                option:unwrap-or (get stage :handoff) nil
           :examples $ []
           :schema $ :: 'Dynamic
         |effect-knowledge-network $ %{} 'CodeEntry (:doc |)
@@ -676,7 +803,8 @@
               when (= action :unmount)
                 let
                     cy $ get @*knowledge-network-instances el
-                  when (some? cy) (.!destroy cy)
+                  when (option:some? cy)
+                    .!destroy $ option:unwrap cy
                     swap! *knowledge-network-instances $ fn (instances) (dissoc instances el)
           :examples $ []
           :schema $ :: 'Fn
@@ -692,14 +820,16 @@
           :code $ quote
             defn find-knowledge-node (id)
               find knowledge-nodes $ fn (node)
-                = id $ :id node
+                = id $ option:unwrap-or (get node :id) nil
           :examples $ []
           :schema $ :: 'Dynamic
         |graph-domain-key $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn graph-domain-key (doc)
               let
-                  id $ :id doc
+                  id $ option:unwrap-or
+                    get doc $ turn-tag |id
+                    , nil
                 cond
                     contains? (#{} |real-numbers |complex-numbers |complex-origin |complex-equations |complex-plane-section |complex-multiplication |complex-structure |imaginary-unit |argand-plane |cardano-casus |bombelli-algebra |wessel-argand-gauss |euler-formula |fundamental-theorem-algebra) id
                     , |complex
@@ -794,18 +924,21 @@
             defn knowledge-dimensions (doc)
               []
                 {} (:label "|历史时间")
-                  :value $ or (:era doc) "|跨时期"
+                  :value $ or
+                    option:unwrap-or (get doc :era) nil
+                    , "|跨时期"
                 {} (:label "|数域／结构")
                   :value $ number-domain-label doc
                 {} (:label "|空间维度")
                   :value $ space-dimension-label doc
                 {} (:label "|知识角色")
-                  :value $ kind-label (:kind doc)
+                  :value $ kind-label
+                    option:unwrap-or (get doc :kind) nil
           :examples $ []
           :schema $ :: 'Dynamic
         |knowledge-doc-diagnostics $ %{} 'CodeEntry (:doc |)
           :code $ quote
-            def knowledge-doc-diagnostics $ :diagnostics knowledge-bundle
+            def knowledge-doc-diagnostics $ option:unwrap-or (get knowledge-bundle :diagnostics) ({})
           :examples $ []
           :schema $ :: 'Dynamic
         |knowledge-doc-reference-ids $ %{} 'CodeEntry (:doc |)
@@ -831,12 +964,12 @@
           :schema $ :: 'Dynamic
         |knowledge-doc-warnings $ %{} 'CodeEntry (:doc |)
           :code $ quote
-            def knowledge-doc-warnings $ :warnings knowledge-doc-diagnostics
+            def knowledge-doc-warnings $ option:unwrap-or (get knowledge-doc-diagnostics :warnings) ([])
           :examples $ []
           :schema $ :: 'Dynamic
         |knowledge-docs $ %{} 'CodeEntry (:doc |)
           :code $ quote
-            def knowledge-docs $ :docs knowledge-bundle
+            def knowledge-docs $ option:unwrap-or (get knowledge-bundle :docs) nil
           :examples $ []
           :schema $ :: 'Dynamic
         |knowledge-edges $ %{} 'CodeEntry (:doc |)
@@ -851,7 +984,9 @@
                       = :outgoing $ option:unwrap-or (get relation :direction) nil
                   fn (relation)
                     {}
-                      :source $ option:unwrap-or (get doc :id) nil
+                      :source $ option:unwrap-or
+                        get doc $ turn-tag |id
+                        , nil
                       :target $ option:unwrap-or (get relation :target) nil
                       :relation $ option:unwrap-or (get relation :label) nil
                       :kind $ option:unwrap-or (get relation :kind) nil
@@ -863,19 +998,25 @@
               map knowledge-nodes $ fn (doc)
                 {} $ :data
                   {}
-                    :id $ :id doc
-                    :label $ :label doc
-                    :era $ :era doc
+                    :id $ option:unwrap-or
+                      get doc $ turn-tag |id
+                      , nil
+                    :label $ option:unwrap-or (get doc :label) nil
+                    :era $ option:unwrap-or (get doc :era) nil
                     :domain $ graph-domain-key doc
-                    :kind $ kind-label (:kind doc)
+                    :kind $ kind-label
+                      option:unwrap-or (get doc :kind) nil
               map knowledge-edges $ fn (edge)
                 {} $ :data
                   {}
-                    :id $ str (:source edge) "|→" (:target edge)
-                    :source $ :source edge
-                    :target $ :target edge
-                    :label $ :relation edge
-                    :kind $ :kind edge
+                    :id $ str
+                      option:unwrap-or (get edge :source) nil
+                      , "|→"
+                        option:unwrap-or (get edge :target) nil
+                    :source $ option:unwrap-or (get edge :source) nil
+                    :target $ option:unwrap-or (get edge :target) nil
+                    :label $ option:unwrap-or (get edge :relation) nil
+                    :kind $ option:unwrap-or (get edge :kind) nil
           :examples $ []
           :schema $ :: 'Dynamic
         |knowledge-nodes $ %{} 'CodeEntry (:doc |)
@@ -896,47 +1037,31 @@
                   {} (:id |context) (:title "|时代问题") (:hint "|数学家当时面对的阻力与边界")
                     :content $ option:unwrap-or (get node :context) nil
                   {} (:id |detail) (:title "|数学内核") (:hint "|定义、结构与推理的核心")
-                    :content $ :detail node
+                    :content $ option:unwrap-or (get node :detail) nil
                   {} (:id |breakthrough) (:title "|关键突破") (:hint "|真正改变思考方式的一步")
-                    :content $ :breakthrough node
+                    :content $ option:unwrap-or (get node :breakthrough) nil
                   {} (:id |meaning) (:title "|现实意义") (:hint "|它怎样改变空间、运动与物理描述")
-                    :content $ :meaning node
+                    :content $ option:unwrap-or (get node :meaning) nil
                   {} (:id |debate) (:title "|争议与误区") (:hint "|容易被简化或误读的地方")
-                    :content $ :debate node
+                    :content $ option:unwrap-or (get node :debate) nil
                   {} (:id |legacy) (:title "|后续影响") (:hint "|它打开了哪些后续方向")
-                    :content $ :legacy node
+                    :content $ option:unwrap-or (get node :legacy) nil
                   {} (:id |sources) (:title "|资料线索") (:hint "|继续阅读的原始文献与历史资料")
-                    :content $ :sources node
+                    :content $ option:unwrap-or (get node :sources) nil
                 fn (section)
-                  some? $ :content section
+                  option:some? $ get section :content
           :examples $ []
           :schema $ :: 'Dynamic
         |load-knowledge-docs $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defmacro load-knowledge-docs () $ let
                 paths $ [] |content/argand-plane.md |content/bombelli-algebra.md |content/cardano-casus.md |content/cartan-spinors.md |content/clifford-algebra.md |content/clifford-physics.md |content/clifford-synthesis.md |content/clifford.md |content/complex-equations.md |content/complex-multiplication.md |content/complex-numbers.md |content/complex-origin.md |content/complex-plane.md |content/complex-structure.md |content/computer-graphics.md |content/conformal-geometric-algebra.md |content/dirac-equation.md |content/dirac-square-root.md |content/euler-formula.md |content/exterior-algebra.md |content/frobenius-theorem.md |content/fundamental-theorem-algebra.md |content/geometric-product-card.md |content/geometric-product.md |content/grassmann.md |content/hamilton.md |content/hyperbolic-rotation.md |content/imaginary-unit.md |content/inner-product.md |content/lorentz-transform.md |content/maxwell-field.md |content/minkowski-spacetime.md |content/noncommutativity.md |content/quantum-spin.md |content/quaternion-problem.md |content/quaternion-product.md |content/quaternion-rotation.md |content/quaternion-use.md |content/quaternions.md |content/real-numbers.md |content/reflection.md |content/robotics.md |content/rotor.md |content/so3.md |content/spacetime-fields.md |content/spacetime-unification.md |content/spinor.md |content/su2.md |content/vector-analysis-debate.md |content/wedge-product.md |content/wessel-argand-gauss.md
-                pairs $ map paths
-                  fn (path)
-                    let
-                        lines $ split-lines (read-file path)
-                        closing-index $ inc
-                          option:unwrap-or
-                            find-index (rest lines)
-                              fn (line) (= line |---)
-                            , -1
-                        metadata $ parse-cirru-edn
-                          join-str (slice lines 1 closing-index) "|\n"
-                        body $ join-str
-                          slice lines (inc closing-index) (count lines)
-                          , "|\n"
-                        doc $ assoc
-                          assoc (assoc metadata :content body) :source path
-                          , :label
-                            option:unwrap-or (get metadata :title) nil
-                      [] (&map:get doc :id) doc
-                diagnostics $ validate-knowledge-docs! pairs
-                errors $ &map:get diagnostics :errors
-                warnings $ &map:get diagnostics :warnings
+                pairs $ map paths build-doc-pair
+                diagnostics $ {}
+                  :errors $ []
+                  :warnings $ []
+                errors $ unsafe-coerce (&map:get diagnostics :errors) 'List
+                warnings $ unsafe-coerce (&map:get diagnostics :warnings) 'List
                 _warnings $ &doseq (warning warnings)
                   eprintln |[knowledge-warning] $ &map:get warning :message
                 _errors $ when-not (empty? errors)
@@ -957,7 +1082,7 @@
             defn markdown-body-without-title (content)
               let
                   lines $ split-lines content
-                  first-line $ first lines
+                  first-line $ option:unwrap-or (first lines) |
                 if (starts-with? first-line "|## ")
                   join-str (rest lines) "|\n"
                   , content
@@ -967,15 +1092,19 @@
           :code $ quote
             defn markdown-chapter-cards (doc)
               let
-                  parts $ split (:content doc) "|\n## "
+                  parts $ split
+                    option:unwrap-or (get doc :content) nil
+                    , "|\n## "
                 map-indexed parts $ fn (idx part)
                   let
                       lines $ split-lines part
-                      first-line $ first lines
+                      first-line $ option:unwrap-or (first lines) |
                       heading-in-content? $ starts-with? first-line "|## "
                       chapter-title $ if heading-in-content? (slice first-line 3)
                         if (= idx 0)
-                          str (:title doc) "|：概览"
+                          str
+                            option:unwrap-or (get doc :title) nil
+                            , "|：概览"
                           , first-line
                       chapter-content $ if
                         or heading-in-content? $ > idx 0
@@ -983,7 +1112,9 @@
                         , part
                     {}
                       :id $ str
-                        option:unwrap-or (get doc :id) nil
+                        option:unwrap-or
+                          get doc $ turn-tag |id
+                          , nil
                         , |-chapter- idx
                       :title chapter-title
                       :tags $ option:unwrap-or (get doc :tags)
@@ -997,7 +1128,9 @@
           :code $ quote
             defn number-domain-label (doc)
               let
-                  id $ :id doc
+                  id $ option:unwrap-or
+                    get doc $ turn-tag |id
+                    , nil
                 cond
                     contains? (#{} |real-numbers) id
                     , "|实数域 ℝ"
@@ -1031,17 +1164,24 @@
               map
                 filter knowledge-edges $ fn (edge)
                   or
-                    = id $ :source edge
-                    = id $ :target edge
+                    = id $ option:unwrap-or (get edge :source) nil
+                    = id $ option:unwrap-or (get edge :target) nil
                 fn (edge)
                   let
-                      outgoing? $ = id (:source edge)
-                      other-id $ if outgoing? (:target edge) (:source edge)
+                      outgoing? $ = id
+                        option:unwrap-or (get edge :source) nil
+                      other-id $ if outgoing?
+                        option:unwrap-or (get edge :target) nil
+                        option:unwrap-or (get edge :source) nil
                       other $ find-knowledge-node other-id
                     {} (:id other-id)
-                      :label $ :label other
-                      :summary $ :summary other
-                      :relation $ :relation edge
+                      :label $ option:unwrap-or
+                        get (option:unwrap-or other nil) :label
+                        , nil
+                      :summary $ option:unwrap-or
+                        get (option:unwrap-or other nil) :summary
+                        , nil
+                      :relation $ option:unwrap-or (get edge :relation) nil
                       :direction $ if outgoing? "|→" "|←"
           :examples $ []
           :schema $ :: 'Dynamic
@@ -1052,16 +1192,21 @@
                   edges $ filter knowledge-edges
                     fn (edge)
                       or
-                        = id $ :source edge
-                        = id $ :target edge
+                        = id $ option:unwrap-or (get edge :source) nil
+                        = id $ option:unwrap-or (get edge :target) nil
                   labels $ map edges
                     fn (edge)
                       let
-                          outgoing? $ = id (:source edge)
-                          other-id $ if outgoing? (:target edge) (:source edge)
+                          outgoing? $ = id
+                            option:unwrap-or (get edge :source) nil
+                          other-id $ if outgoing?
+                            option:unwrap-or (get edge :target) nil
+                            option:unwrap-or (get edge :source) nil
                           other $ find-knowledge-node other-id
                           arrow $ if outgoing? "|→" "|←"
-                        str (:relation edge) "| " arrow "| " $ :label other
+                        str
+                          option:unwrap-or (get edge :relation) nil
+                          , "| " arrow "| " $ option:unwrap-or (get other :label) nil
                 if (empty? labels) "|暂无直接关系" $ join-str labels "|　/　"
           :examples $ []
           :schema $ :: 'Dynamic
@@ -1069,13 +1214,18 @@
           :code $ quote
             defn section-links-text (section)
               let
-                  links $ or (:links section) ([])
+                  links $ or
+                    option:unwrap-or (get section :links) nil
+                    []
                   labels $ map links
                     fn (id)
                       let
                           doc $ get knowledge-docs id
                           target $ find-knowledge-node id
-                        or (:title doc) (:label target) id
+                        or
+                          option:unwrap-or (get doc :title) nil
+                          option:unwrap-or (get target :label) nil
+                          , id
                 join-str labels "| · "
           :examples $ []
           :schema $ :: 'Dynamic
@@ -1083,7 +1233,9 @@
           :code $ quote
             defn space-dimension-label (doc)
               let
-                  id $ :id doc
+                  id $ option:unwrap-or
+                    get doc $ turn-tag |id
+                    , nil
                 cond
                     contains? (#{} |real-numbers) id
                     , |1D
@@ -1930,7 +2082,9 @@
           :code $ quote
             defn validate-knowledge-docs! (pairs)
               let
-                  ids $ map pairs first
+                  ids $ map pairs
+                    fn (pair)
+                      option:unwrap-or (first pair) nil
                   docs $ pairs-map pairs
                   duplicates $ distinct
                     filter ids $ fn (id)
@@ -1963,9 +2117,13 @@
                             fn (target-id)
                               let
                                   target $ get docs target-id
-                                or (nil? target)
-                                  not= :section $ option:unwrap-or (get target :kind) nil
-                                  not= doc-id $ option:unwrap-or (get target :parent) nil
+                                or (option:none? target)
+                                  not= :section $ option:unwrap-or
+                                    get (option:unwrap-or target nil) :kind
+                                    , nil
+                                  not= doc-id $ option:unwrap-or
+                                    get (option:unwrap-or target nil) :parent
+                                    , nil
                         map invalid $ fn (target-id)
                           {} (:level :error) (:code :invalid-queue-entry) (:source doc-id) (:target target-id)
                             :message $ str "|Invalid knowledge queue: " doc-id "|→" target-id
@@ -1975,7 +2133,9 @@
                           doc-id $ first pair
                           invalid $ filter
                             option:unwrap-or
-                              get (last pair) :relations
+                              get
+                                option:unwrap-or (last pair) nil
+                                , :relations
                               []
                             fn (relation)
                               or
@@ -2042,7 +2202,8 @@
       :defs $ {}
         |dev? $ %{} 'CodeEntry (:doc |)
           :code $ quote
-            def dev? $ = |dev (get-env |mode |release)
+            def dev? $ = |dev
+              option:unwrap-or (get-env |mode) |release
           :examples $ []
           :schema $ :: 'Dynamic
         |site $ %{} 'CodeEntry (:doc |)
@@ -2081,9 +2242,11 @@
                 if (= |hidden js/document.visibilityState) (persist-storage!)
               flipped js/setInterval 60000 persist-storage!
               let
-                  raw $ js/localStorage.getItem (:storage-key config/site)
-                when (some? raw)
-                  dispatch! $ :: :hydrate-storage (parse-cirru-edn raw)
+                  raw $ js/localStorage.getItem
+                    option:unwrap-or (get config/site :storage-key) |
+                when (js-present? raw)
+                  dispatch! $ :: :hydrate-storage
+                    parse-cirru-edn $ unsafe-coerce raw 'String
               println "|App started."
           :examples $ []
           :schema $ :: 'Fn
@@ -2099,8 +2262,9 @@
           :code $ quote
             defn persist-storage! ()
               println "|Saved at" $ .!toISOString (new js/Date)
-              js/localStorage.setItem (:storage-key config/site)
-                format-cirru-edn $ :store @*reel
+              js/localStorage.setItem
+                option:unwrap-or (get config/site :storage-key) |
+                format-cirru-edn $ option:unwrap-or (get @*reel :store) ({})
           :examples $ []
           :schema $ :: 'Fn
             {} (:return 'Dynamic)

@@ -812,21 +812,29 @@
           :code $ quote
             defn knowledge-doc-reference-ids (doc)
               concat
-                or (:links doc) ([])
+                  get doc :links
+                  , .unwrap-or $ []
                 concat
-                  or (:queue doc) ([])
+                    get doc :queue
+                    , .unwrap-or $ []
                   concat
                     if
-                      some? $ :parent doc
-                      [] $ :parent doc
+                        get doc :parent
+                        , .some?
+                      [] $
+                        get doc :parent
+                        , .unwrap
                       []
                     map
-                      or (:relations doc) ([])
+                        get doc :relations
+                        , .unwrap-or $ []
                       fn (relation)
                         if
-                          = :outgoing $ :direction relation
-                          :target relation
-                          :source relation
+                          = :outgoing $
+                            get relation :direction
+                            , .unwrap-or :outgoing
+                          (get relation :target) .unwrap-or ||
+                          (get relation :source) .unwrap-or ||
           :examples $ []
           :schema $ :: 'Dynamic
         'knowledge-doc-warnings $ %{} 'CodeEntry (:doc |)
@@ -930,17 +938,28 @@
                         doc $ assoc
                           assoc (assoc metadata :content body) :source path
                           , :label (:title metadata)
-                      [] (:id doc) doc
+                      []
+                          get doc :id
+                          , .unwrap
+                        , doc
                 diagnostics $ validate-knowledge-docs! pairs
-                errors $ :errors diagnostics
-                warnings $ :warnings diagnostics
+                errors $
+                  get diagnostics :errors
+                  , .unwrap-or ([])
+                warnings $
+                  get diagnostics :warnings
+                  , .unwrap-or ([])
                 _warnings $ &doseq (warning warnings)
-                  eprintln |[knowledge-warning] $ :message warning
+                  eprintln |[knowledge-warning] $
+                    get warning :message
+                    , .unwrap-or ||
                 _errors $ when-not (empty? errors)
                   raise $ str "|Knowledge validation failed:\n"
                     join-str
                       map errors $ fn (error)
-                        str "|- " $ :message error
+                        str "|- " $
+                          get error :message
+                          , .unwrap-or ||
                       , "|\n"
                 serialized $ format-cirru-edn
                   {}
@@ -1943,8 +1962,8 @@
                   broken-reference-errors $ mapcat pairs
                     fn (pair)
                       let
-                          doc-id $ first pair
-                          doc $ last pair
+                          doc-id $ option:unwrap (first pair)
+                          doc $ option:unwrap (last pair)
                           missing $ filter (knowledge-doc-reference-ids doc)
                             fn (target-id)
                               not $ contains? docs target-id
@@ -1957,7 +1976,8 @@
                           doc-id $ first pair
                           doc $ last pair
                           invalid $ filter
-                            or (:queue doc) ([])
+                              get doc :queue
+                              , .unwrap-or $ []
                             fn (target-id)
                               let
                                   target $ get docs target-id
@@ -1970,30 +1990,39 @@
                   relation-errors $ mapcat pairs
                     fn (pair)
                       let
-                          doc-id $ first pair
+                          doc-id $ option:unwrap (first pair)
                           invalid $ filter
-                            or
-                              :relations $ last pair
-                              []
+                              get
+                                option:unwrap $ last pair
+                                , :relations
+                              , .unwrap-or $ []
                             fn (relation)
                               or
                                 not $ or
-                                  = :outgoing $ :direction relation
-                                  = :incoming $ :direction relation
+                                  = :outgoing $
+                                    get relation :direction
+                                    , .unwrap-or :unknown
+                                  = :incoming $
+                                    get relation :direction
+                                    , .unwrap-or :unknown
                                 and
-                                  = :outgoing $ :direction relation
-                                  nil? $ :target relation
+                                  = :outgoing $
+                                    get relation :direction
+                                    , .unwrap-or :unknown
+                                  (get relation :target) .none?
                                 and
-                                  = :incoming $ :direction relation
-                                  nil? $ :source relation
+                                  = :incoming $
+                                    get relation :direction
+                                    , .unwrap-or :unknown
+                                  (get relation :source) .none?
                         map invalid $ fn (relation)
                           {} (:level :error) (:code :invalid-relation) (:source doc-id) (:relation relation)
                             :message $ str "|Invalid knowledge relation: " doc-id "|→" (format-cirru-edn relation)
                   warnings $ mapcat pairs
                     fn (pair)
                       let
-                          doc-id $ first pair
-                          doc $ last pair
+                          doc-id $ option:unwrap (first pair)
+                          doc $ option:unwrap (last pair)
                           missing-summary? $ or
                             nil? $ :summary doc
                             = || $ :summary doc
@@ -2004,8 +2033,12 @@
                               empty? $ :tags doc
                           isolated? $ and
                             not= :section $ :kind doc
-                            empty? $ or (:links doc) ([])
-                            empty? $ or (:relations doc) ([])
+                            empty? $
+                              get doc :links
+                              , .unwrap-or ([])
+                            empty? $
+                              get doc :relations
+                              , .unwrap-or ([])
                         concat
                           if missing-summary?
                             [] $ {} (:level :warning) (:code :missing-summary) (:source doc-id)

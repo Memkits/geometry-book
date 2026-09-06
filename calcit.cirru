@@ -59,8 +59,12 @@
           :code $ quote
             defcomp comp-container (reel)
               let
-                  store $ :store reel
-                  states $ :states store
+                  store $
+                    get reel :store
+                    , .unwrap
+                  states $
+                    get store :states
+                    , .unwrap-or ({})
                 div ({})
                   comp-knowledge-graph $ >> states :knowledge-graph
                   when dev? $ comp-reel (>> states :reel) reel ({})
@@ -491,13 +495,16 @@
                             {} $ :class-name style-reader-related-summary
                             <> $ :summary item
                           when
-                            (get item :tags) .some?
+                              get item :tags
+                              , .some?
                             div
                               {} $ :class-name style-reader-tag-row
                               list-> ({})
                                 map-indexed
                                   take
-                                    .to-list $ (get item :tags) .unwrap
+                                    .to-list $
+                                      get item :tags
+                                      , .unwrap
                                     , 4
                                   fn (tag-idx tag)
                                     [] tag-idx $ span
@@ -2099,7 +2106,8 @@
       :defs $ {}
         'dev? $ %{} 'CodeEntry (:doc |)
           :code $ quote
-            def dev? $ = |dev (get-env |mode |release)
+            def dev? $ = |dev
+              (get-env |mode) .unwrap-or |release
           :examples $ []
           :schema $ :: 'Dynamic
         'site $ %{} 'CodeEntry (:doc |)
@@ -2135,12 +2143,17 @@
               listen-devtools! |k dispatch!
               js/window.addEventListener |beforeunload $ fn (event) (persist-storage!)
               js/window.addEventListener |visibilitychange $ fn (event)
-                if (= |hidden js/document.visibilityState) (persist-storage!)
+                if
+                  = |hidden $ unsafe-coerce js/document.visibilityState 'String
+                  (persist-storage!)
               flipped js/setInterval 60000 persist-storage!
               let
-                  raw $ js/localStorage.getItem (:storage-key config/site)
-                when (some? raw)
-                  dispatch! $ :: :hydrate-storage (parse-cirru-edn raw)
+                  raw $ js/localStorage.getItem
+                      get config/site :storage-key
+                      , .unwrap
+                when (js-present? raw)
+                  dispatch! $ :: :hydrate-storage
+                    parse-cirru-edn $ unsafe-coerce raw 'String
               println "|App started."
           :examples $ []
           :schema $ :: 'Fn
@@ -2156,8 +2169,12 @@
           :code $ quote
             defn persist-storage! ()
               println "|Saved at" $ .!toISOString (new js/Date)
-              js/localStorage.setItem (:storage-key config/site)
-                format-cirru-edn $ :store @*reel
+              js/localStorage.setItem
+                  get config/site :storage-key
+                  , .unwrap
+                format-cirru-edn $
+                  get @*reel :store
+                  , .unwrap
           :examples $ []
           :schema $ :: 'Fn
             {} (:return 'Dynamic)

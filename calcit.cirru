@@ -158,28 +158,51 @@
             defcomp comp-knowledge-graph (states)
               let
                   cursor $ :cursor states
-                  state $ or (:data states)
-                    {} (:selected |complex-numbers) (:active-section |history)
-                      :history $ []
-                  selected-id $ or (:selected state) |complex-numbers
-                  node $ or (find-knowledge-node selected-id) (first knowledge-nodes)
-                  blueprint $ find-card-blueprint selected-id
+                  state $
+                    get states :data
+                    , .unwrap-or
+                      {} (:selected |complex-numbers) (:active-section |history)
+                        :history $ []
+                  selected-id $
+                    get state :selected
+                    , .unwrap-or |complex-numbers
+                  node $
+                    find-knowledge-node selected-id
+                    , .unwrap-or
+                      (first knowledge-nodes) .unwrap
+                  blueprint $
+                    find-card-blueprint selected-id
+                    , .unwrap-or ({})
                   sections $ card-queue node blueprint
-                  requested-id $ or (:active-section state)
-                    :id $ first sections
-                  active-section $ or
-                    find sections $ fn (section)
+                  requested-id $
+                    get state :active-section
+                    , .unwrap-or
+                      (get ((first sections) .unwrap) :id)
+                        , .unwrap
+                  active-section-option $ find sections
+                    fn (section)
                       = requested-id $ :id section
-                    first sections
-                  active-id $ :id active-section
-                  visit-history $ or (:history state) ([])
-                  map-view? $ = (:view state) :map
+                  active-section $ active-section-option .unwrap-or
+                    (first sections) .unwrap
+                  active-id $
+                    get active-section :id
+                    , .unwrap
+                  visit-history $
+                    get state :history
+                    , .unwrap-or ([])
+                  map-view? $ =
+                      get state :view
+                      , .unwrap-or :reader
+                    , :map
                   related $ card-recommendations selected-id active-section blueprint
-                  timeline-active-id $ or
-                    find history-timeline-ids $ fn (id) (= id selected-id)
-                    find history-timeline-ids $ fn (id)
-                      = id $ :parent blueprint
-                    , selected-id
+                  timeline-selected $ find history-timeline-ids
+                    fn (id) (= id selected-id)
+                  timeline-parent $ find history-timeline-ids
+                    fn (id)
+                      = id $
+                        get blueprint :parent
+                        , .unwrap-or ||
+                  timeline-active-id $ timeline-selected .unwrap-or (timeline-parent .unwrap-or selected-id)
                   navigate! $ fn (target-id d!)
                     d! cursor $ {} (:selected target-id) (:active-section |history)
                       :history $ take-last
@@ -385,11 +408,14 @@
                                 {} $ :class-name style-reader-dimension-value
                                 <> $ :value dimension
                       when
-                        some? $ :tags blueprint
+                          get blueprint :tags
+                          , .some?
                         list->
                           {} $ :class-name style-reader-tag-row
                           map-indexed
-                            .to-list $ :tags blueprint
+                            .to-list $
+                              get blueprint :tags
+                              , .unwrap
                             fn (idx tag)
                               [] idx $ span
                                 {} $ :class-name style-reader-tag
@@ -465,13 +491,13 @@
                             {} $ :class-name style-reader-related-summary
                             <> $ :summary item
                           when
-                            some? $ :tags item
+                            (get item :tags) .some?
                             div
                               {} $ :class-name style-reader-tag-row
                               list-> ({})
                                 map-indexed
                                   take
-                                    .to-list $ :tags item
+                                    .to-list $ (get item :tags) .unwrap
                                     , 4
                                   fn (tag-idx tag)
                                     [] tag-idx $ span

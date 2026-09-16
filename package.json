@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@calcit/procs": "0.13.77",
+    "@calcit/procs": "0.14.17",
     "cirru-color": "^0.2.4",
     "copy-text-to-clipboard": "^3.2.2",
     "cytoscape": "^3.34.0",
@@ -12,7 +12,7 @@
     "vite": "^8.0.12"
   },
   "scripts": {
-    "compile": "caps --ci && cr calcit.cirru js",
+    "compile": "caps --ci && calcit calcit.cirru js",
     "release": "yarn vite build --base=./"
   },
   "version": "0.0.1",

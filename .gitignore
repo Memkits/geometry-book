@@ -13,3 +13,5 @@ calcit.cirru
 .yarn/
 
 .copilot-tmp/
+.pnp.cjs
+.pnp.loader.mjs

@@ -3,7 +3,7 @@
   :about "|Machine-generated snapshot. Do not edit directly — changes will be overwritten. Use `calcit query` to inspect and `calcit edit`/`calcit tree` to modify. Run `calcit docs agents --contract` before mutations; use `--full` for first orientation or changed contract digest. Manual edits must follow format and schema conventions, then run `calcit edit format`."
   :package |app
   :entries $ {} $ :default
-    {} (:description |) (:init-fn 'app.main/main!) (:mode :native) (:reload-fn 'app.main/reload!)
+    {} (:description |) (:init-fn 'app.main/main!) (:mode :js) (:reload-fn 'app.main/reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |memof/ |respo-ui.calcit/ |reel.calcit/ |respo-markdown.calcit/
       :type-slots $ {}
@@ -13,7 +13,7 @@
         '*knowledge-network-instances $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defatom *knowledge-network-instances ({})
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Ref $ :: 'Map 'Dynamic 'Dynamic
         'card-queue $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn card-queue (node blueprint)
             let
@@ -23,17 +23,27 @@
               if (empty? queue) (markdown-chapter-cards blueprint)
                 map queue $ fn (id) (get knowledge-docs id) .unwrap
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {}
+            :args $ [] (:: 'Map 'Tag 'Dynamic) (:: 'Map 'Tag 'Dynamic)
+            :return $ :: 'List $ :: 'Map 'Tag 'Dynamic
         'card-recommendations $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn card-recommendations (selected-id active-card blueprint)
             let
                 related-items $ related-knowledge-nodes selected-id
                 explicit $ concat
-                    get active-card :links
-                    , .unwrap-or $ []
-                  (get blueprint :links) .unwrap-or $ []
+                  option:unwrap-or
+                    assert-type (get active-card :links)
+                      :: 'Option $ :: 'List 'String
+                    []
+                  option:unwrap-or
+                    assert-type (get blueprint :links)
+                      :: 'Option $ :: 'List 'String
+                    []
                 ids $ distinct $ concat explicit
-                  map related-items $ fn (item) (get item :id) .unwrap
+                  map related-items $ fn (item)
+                    assert-type
+                      option:unwrap $ get item :id
+                      , 'String
               map (take ids 10)
                 fn (id)
                   let
@@ -70,7 +80,9 @@
                             get node :kind
                             , .unwrap-or :concept
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'String (:: 'Map 'Tag 'Dynamic) (:: 'Map 'Tag 'Dynamic)
+            :return $ :: 'List $ :: 'Map 'Tag 'Dynamic
         'comp-container $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-container (reel)
             let
@@ -84,7 +96,8 @@
                 comp-knowledge-graph $ >> states :knowledge-graph
                 when dev? $ comp-reel (>> states :reel) reel $ {}
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
+            :args $ [] $ :: 'Map 'Tag 'Dynamic
         'comp-global-map-network $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-global-map-network (graph-data)
             [] (effect-knowledge-network graph-data)
@@ -94,7 +107,8 @@
                   {} $ :class-name style-overview-network-note
                   <> "|关系网络 · 拖动空白处平移，滚轮缩放；颜色对应数域、四元数、几何代数与时空主线。"
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
+            :args $ [] $ :: 'List (:: 'Map 'Tag 'Dynamic)
         'comp-heatmap-view $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-heatmap-view (state cursor)
             div
@@ -153,8 +167,10 @@
                                     = (graph-domain-key doc)
                                       (get domain :key) .unwrap
                                     option:some? $ find
-                                        get stage :ids
-                                        , .unwrap-or $ []
+                                      option:unwrap-or
+                                        assert-type (get stage :ids)
+                                          :: 'Option $ :: 'List 'String
+                                        []
                                       fn (id)
                                         = id $
                                           get doc :id
@@ -192,32 +208,34 @@
                                     {} $ :class-name style-heatmap-caption
                                     <> $ if (= amount 0) "|暂无卡片" "|点击浏览"
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
+            :args $ [] (:: 'Map 'Tag 'Dynamic) (:: 'List 'Dynamic)
         'comp-knowledge-graph $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-knowledge-graph (states)
             let
-                cursor $
-                  get states :cursor
-                  , .unwrap-or $ []
-                state $
-                  get states :data
-                  , .unwrap-or $ {} (:selected |complex-numbers) (:active-section |history)
+                cursor $ option:unwrap-or
+                  assert-type (get states :cursor)
+                    :: 'Option $ :: 'List 'Dynamic
+                  []
+                state $ option:unwrap-or
+                  assert-type (get states :data)
+                    :: 'Option $ :: 'Map 'Tag 'Dynamic
+                  {} (:selected |complex-numbers) (:active-section |history)
                     :history $ []
-                selected-id $
-                  get state :selected
-                  , .unwrap-or |complex-numbers
+                selected-id $ option:unwrap-or
+                  assert-type (get state :selected) (:: 'Option 'String)
+                  , |complex-numbers
                 node $ option:unwrap-or (find-knowledge-node selected-id)
                   (first knowledge-nodes) .unwrap
                 blueprint $ option:unwrap-or (find-card-blueprint selected-id) ({})
                 sections $ card-queue node blueprint
-                requested-id $
-                  get state :active-section
-                  , .unwrap-or $
-                    get
-                        first sections
-                        , .unwrap
+                requested-id $ option:unwrap-or
+                  assert-type (get state :active-section) (:: 'Option 'String)
+                  assert-type
+                    option:unwrap $ get
+                      option:unwrap $ first sections
                       , :id
-                    , .unwrap
+                    , 'String
                 active-section-option $ find sections $ fn (section)
                   = requested-id $
                     get section :id
@@ -228,12 +246,14 @@
                 active-id $
                   get active-section :id
                   , .unwrap
-                visit-history $
-                  get state :history
-                  , .unwrap-or $ []
+                visit-history $ option:unwrap-or
+                  assert-type (get state :history)
+                    :: 'Option $ :: 'List 'String
+                  []
                 map-view? $ =
-                    get state :view
-                    , .unwrap-or :reader
+                  option:unwrap-or
+                    assert-type (get state :view) (:: 'Option 'Tag)
+                    , :reader
                   , :map
                 related $ card-recommendations selected-id active-section blueprint
                 timeline-selected $ find history-timeline-ids $ fn (id) (= id selected-id)
@@ -647,7 +667,8 @@
                     , :heatmap
                   comp-heatmap-view state cursor
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
+            :args $ [] $ :: 'Map 'Tag 'Dynamic
         'comp-timeline-view $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-timeline-view (state cursor)
             div
@@ -723,8 +744,10 @@
                           list->
                             {} $ :class-name style-timeline-branches
                             map-indexed
-                                get stage :branches
-                                , .unwrap-or $ []
+                              option:unwrap-or
+                                assert-type (get stage :branches)
+                                  :: 'Option $ :: 'List $ :: 'Map 'Tag 'Dynamic
+                                []
                               fn (branch-idx branch)
                                 []
                                     get branch :title
@@ -749,8 +772,10 @@
                                     list->
                                       {} $ :class-name style-timeline-event-list
                                       map-indexed
-                                          get branch :ids
-                                          , .unwrap-or $ []
+                                        option:unwrap-or
+                                          assert-type (get branch :ids)
+                                            :: 'Option $ :: 'List 'String
+                                          []
                                         fn (card-idx id)
                                           let
                                               target $ option:unwrap $ find-knowledge-node id
@@ -791,7 +816,8 @@
                               get stage :handoff
                               , .unwrap-or ||
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
+            :args $ [] (:: 'Map 'Tag 'Dynamic) (:: 'List 'Dynamic)
         'effect-knowledge-network $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defeffect effect-knowledge-network (graph-data) (action el at-place?)
             when (= action :mount) (fcose cytoscape)
@@ -836,23 +862,25 @@
                         :style $ {} (:opacity |0.72) (:overlay-opacity |0)
                     :layout $ js-object (:name |fcose) (:animate false) (:fit false) (:padding 96) (:quality |proof) (:nodeRepulsion 90000) (:idealEdgeLength 380) (:edgeElasticity 0.15) (:nodeSeparation 120) (:gravity 0.02) (:gravityRange 3.8) (:numIter 2500) (:tilingPaddingVertical 60) (:tilingPaddingHorizontal 60) (:tile true) (:randomize true) (:nodeDimensionsIncludeLabels true)
                   cy $ cytoscape options
-                swap! *knowledge-network-instances $ fn (instances) (assoc instances el cy)
+                reset! *knowledge-network-instances $ assert-type (assoc @*knowledge-network-instances el cy) (:: 'Map 'Dynamic 'Dynamic)
                 js/window.setTimeout
                   fn () (.!resize cy) (.!center cy)
                   , 24
             when (= action :unmount)
               let
                   cy $ get @*knowledge-network-instances el
-                when (some? cy) (.!destroy cy)
-                  swap! *knowledge-network-instances $ fn (instances) (dissoc instances el)
+                when (option:some? cy) (.!destroy cy)
+                  reset! *knowledge-network-instances $ assert-type (dissoc @*knowledge-network-instances el) (:: 'Map 'Dynamic 'Dynamic)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Dynamic)
+          :schema $ :: 'Fn $ {} (:return 'Effect)
             :args $ [] 'Dynamic
             :features $ #{} :js-ffi
         'find-card-blueprint $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn find-card-blueprint (id) (get knowledge-docs id)
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'String
+            :return $ :: 'Option $ :: 'Map 'Tag 'Dynamic
         'find-knowledge-node $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn find-knowledge-node (id)
             find knowledge-nodes $ fn (node)
@@ -860,8 +888,9 @@
                 get node :id
                 , .unwrap
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Dynamic)
-            :args $ [] 'Dynamic
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'String
+            :return $ :: 'Option $ :: 'Map 'Tag 'Dynamic
         'graph-domain-key $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn graph-domain-key (doc)
             let
@@ -879,7 +908,8 @@
                   , |spacetime
                 true |geometric
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {} (:return 'String)
+            :args $ [] $ :: 'Map 'Tag 'Dynamic
         'heatmap-domains $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def heatmap-domains
             []
@@ -951,12 +981,13 @@
                     :note "|四元数和几何代数不只是历史遗产：姿态估计、传感器融合、骨骼动画、相机控制与共形模型仍在直接使用它们。"
                     :ids $ [] |robotics |computer-graphics |conformal-geometric-algebra
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'List $ :: 'Map 'Tag 'Dynamic
         'history-milestone-era $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn history-milestone-era (id)
             case-default id "|跨时期" (|complex-numbers "|1545—1831") (|quaternions |1843) (|grassmann |1844) (|clifford-algebra |1878) (|minkowski-spacetime |1908) (|spinor |1913) (|dirac-equation |1928)
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {} (:return 'String)
+            :args $ [] 'String
         'history-timeline-ids $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def history-timeline-ids ([] |complex-numbers |quaternions |grassmann |clifford-algebra |minkowski-spacetime |spinor |dirac-equation)
           :examples $ []
@@ -965,11 +996,12 @@
           :code $ quote $ defn kind-label (kind)
             case-default kind "|知识节点" (:concept "|核心概念") (:theorem "|定理与公式") (:person "|历史人物") (:operation "|代数运算") (:principle "|基本原理") (:structure "|数学结构") (:representation "|几何表示") (:application "|现实应用")
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {} (:return 'String)
+            :args $ [] 'Tag
         'knowledge-bundle $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def knowledge-bundle (load-knowledge-docs)
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Map 'Tag 'Dynamic
         'knowledge-dimensions $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn knowledge-dimensions (doc)
             []
@@ -986,7 +1018,9 @@
                   get doc :kind
                   , .unwrap-or :concept
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {}
+            :args $ [] $ :: 'Map 'Tag 'Dynamic
+            :return $ :: 'List $ :: 'Map 'Tag 'String
         'knowledge-doc-diagnostics $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def knowledge-doc-diagnostics
             (get knowledge-bundle :diagnostics) .unwrap-or $ {}
@@ -994,32 +1028,32 @@
           :schema $ :: 'Dynamic
         'knowledge-doc-reference-ids $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn knowledge-doc-reference-ids (doc)
-            concat
-                get doc :links
-                , .unwrap-or $ []
-              concat
-                  get doc :queue
-                  , .unwrap-or $ []
-                concat
-                  if
-                      get doc :parent
-                      , .some?
-                    [] $
-                      get doc :parent
-                      , .unwrap
-                    []
-                  map
-                      get doc :relations
-                      , .unwrap-or $ []
-                    fn (relation)
-                      if
-                        = :outgoing $
-                          get relation :direction
-                          , .unwrap-or :outgoing
-                        (get relation :target) .unwrap-or ||
-                        (get relation :source) .unwrap-or ||
+            let
+                links $ assert-type
+                  option:unwrap-or (get doc :links) ([])
+                  :: 'List 'String
+                queue $ assert-type
+                  option:unwrap-or (get doc :queue) ([])
+                  :: 'List 'String
+                parent $ assert-type (get doc :parent) (:: 'Option 'String)
+                relations $ assert-type
+                  option:unwrap-or (get doc :relations) ([])
+                  :: 'List $ :: 'Map 'Tag 'Dynamic
+              concat links $ concat queue $ concat
+                if (option:some? parent)
+                  [] $ option:unwrap parent
+                  []
+                map relations $ fn (relation)
+                  assert-type
+                    if
+                      = :outgoing $ option:unwrap-or (get relation :direction) :outgoing
+                      option:unwrap-or (get relation :target) ||
+                      option:unwrap-or (get relation :source) ||
+                    , 'String
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {}
+            :args $ [] $ :: 'Map 'Tag 'Dynamic
+            :return $ :: 'List 'String
         'knowledge-doc-warnings $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def knowledge-doc-warnings (:warnings knowledge-doc-diagnostics)
           :examples $ []
@@ -1028,7 +1062,7 @@
           :code $ quote $ def knowledge-docs
             (get knowledge-bundle :docs) .unwrap-or $ {}
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Map 'String $ :: 'Map 'Tag 'Dynamic
         'knowledge-edges $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def knowledge-edges
             mapcat
@@ -1097,7 +1131,9 @@
                     get edge :kind
                     , .unwrap-or :related
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {}
+            :args $ []
+            :return $ :: 'List $ :: 'Map 'Tag 'Dynamic
         'knowledge-nodes $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def knowledge-nodes
             filter
@@ -1107,7 +1143,7 @@
                   get doc :kind
                   , .unwrap-or :concept
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'List $ :: 'Map 'Tag 'Dynamic
         'knowledge-sections $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn knowledge-sections (node)
             filter
@@ -1149,7 +1185,9 @@
                   get section :content
                   , .unwrap-or ||
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {}
+            :args $ [] $ :: 'Map 'Tag 'Dynamic
+            :return $ :: 'List $ :: 'Map 'Tag 'Dynamic
         'load-knowledge-docs $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defmacro load-knowledge-docs ()
             let
@@ -1211,7 +1249,8 @@
                 join-str (rest lines) "|\n"
                 , content
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {} (:return 'String)
+            :args $ [] 'String
         'markdown-chapter-cards $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn markdown-chapter-cards (doc)
             let
@@ -1254,7 +1293,9 @@
                       , .unwrap-or $ []
                     :content chapter-content
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {}
+            :args $ [] $ :: 'Map 'Tag 'Dynamic
+            :return $ :: 'List $ :: 'Map 'Tag 'Dynamic
         'number-domain-label $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn number-domain-label (doc)
             let
@@ -1274,7 +1315,8 @@
                   , "|时空与算子代数"
                 true "|跨结构"
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {} (:return 'String)
+            :args $ [] $ :: 'Map 'Tag 'Dynamic
         'overview-lanes $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def overview-lanes
             []
@@ -1320,7 +1362,9 @@
                       , .unwrap-or ||
                     :direction $ if outgoing? "|→" "|←"
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'String
+            :return $ :: 'List $ :: 'Map 'Tag 'Dynamic
         'related-knowledge-text $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn related-knowledge-text (id)
             let
@@ -1350,13 +1394,15 @@
                         , .unwrap-or ||
               if (empty? labels) "|暂无直接关系" $ join-str labels "|　/　"
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {} (:return 'String)
+            :args $ [] 'String
         'section-links-text $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn section-links-text (section)
             let
-                links $
-                  get section :links
-                  , .unwrap-or $ []
+                links $ option:unwrap-or
+                  assert-type (get section :links)
+                    :: 'Option $ :: 'List 'String
+                  []
                 labels $ map links $ fn (id)
                   let
                       doc $
@@ -1368,7 +1414,8 @@
                       , .unwrap-or id
               join-str labels "| · "
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {} (:return 'String)
+            :args $ [] $ :: 'Map 'Tag 'Dynamic
         'space-dimension-label $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn space-dimension-label (doc)
             let
@@ -1388,7 +1435,8 @@
                   , "|nD 可扩展"
                 true "|结构维度"
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {} (:return 'String)
+            :args $ [] $ :: 'Map 'Tag 'Dynamic
         'style-heatmap-board $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-heatmap-board
             {} $ |& $ {} (:max-width |1480px) (:margin "|24px auto") (:border "|1px solid #d6e5f4") (:border-radius |10px) (:background "|rgba(255,255,255,.72)") (:padding |16px) (:overflow-x |auto)
@@ -2131,7 +2179,10 @@
         'validate-knowledge-docs! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn validate-knowledge-docs! (pairs)
             let
-                ids $ map pairs first
+                ids $ map pairs $ fn (pair)
+                  assert-type
+                    option:unwrap $ first pair
+                    , 'String
                 docs $ pairs-map pairs
                 duplicates $ distinct $ filter ids
                   fn (id)
@@ -2245,7 +2296,9 @@
                 :errors $ concat duplicate-errors $ concat broken-reference-errors (concat queue-errors relation-errors)
                 :warnings warnings
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {}
+            :args $ [] $ :: 'List (:: 'List 'Dynamic)
+            :return $ :: 'Map 'Tag 'Dynamic
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.container
           :require
@@ -2286,7 +2339,9 @@
               js/console.log |Dispatch: op
             reset! *reel $ reel-updater updater @*reel op
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {} (:return 'Unit)
+            :args $ [] 'Dynamic
+            :features $ #{} :js-ffi
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println "|Running mode:" $ if config/dev? |dev |release
@@ -2294,11 +2349,11 @@
             render-app!
             add-watch *reel :changes $ fn (reel prev) (render-app!)
             listen-devtools! |k dispatch!
-            js/window.addEventListener |beforeunload $ fn (event) (persist-storage!)
+            js/window.addEventListener |beforeunload $ fn (event) persist-storage!
             js/window.addEventListener |visibilitychange $ fn (event)
               if
                 = |hidden $ unsafe-coerce js/document.visibilityState 'String
-                (persist-storage!)
+                persist-storage!
             flipped js/setInterval 60000 persist-storage!
             let
                 raw $ js/localStorage.getItem $
@@ -2318,16 +2373,14 @@
             :args $ []
             :features $ #{} :js-ffi
         'persist-storage! $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn persist-storage! ()
-            println "|Saved at" $ .!toISOString $ new js/Date
+          :code $ quote $ defn persist-storage! () (println |Saved)
             js/localStorage.setItem
                 get config/site :storage-key
                 , .unwrap
-              format-cirru-edn $
-                get @*reel :store
-                , .unwrap
+              format-cirru-edn $ option:unwrap $ get @*reel :store
+            , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Dynamic)
+          :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
             :features $ #{} :js-ffi
         'reload! $ %{} 'CodeEntry (:doc |)
@@ -2335,11 +2388,12 @@
             if (nil? build-errors)
               do (remove-watch *reel :changes) (clear-cache!)
                 add-watch *reel :changes $ fn (reel prev) (render-app!)
-                reset! *reel $ refresh-reel @*reel schema/store updater
+                reset! *reel $ assert-type (refresh-reel @*reel schema/store updater) (:: 'Map 'Tag 'Dynamic)
                 hud! |ok~ |Ok
               hud! |error build-errors
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {} (:return 'Unit)
+            :args $ []
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! ()
             render! mount-target (comp-container @*reel) dispatch!
@@ -2378,7 +2432,9 @@
               (:hydrate-storage data) data
               _ $ do (eprintln "|unknown op:" op) store
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Fn $ {}
+            :args $ [] (:: 'Map 'Tag 'Dynamic) 'Dynamic 'String 'Number
+            :return $ :: 'Map 'Tag 'Dynamic
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater
           :require $ respo.cursor :refer $ update-states

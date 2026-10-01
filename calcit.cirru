@@ -2317,12 +2317,12 @@
               get-env |mode
               , .unwrap-or |release
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Bool
         'site $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def site
             {} $ :storage-key |workflow
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Map 'Tag 'String
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.config
     'app.main $ %{} 'FileEntry
@@ -2335,12 +2335,14 @@
         'dispatch! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch! (op)
             when
-              and config/dev? $ not= op :states
+              and config/dev? $ match op
+                (:states _ _) false
+                _ true
               js/console.log |Dispatch: op
             reset! *reel $ reel-updater updater @*reel op
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'Dynamic
+            :args $ [] 'Enum
             :features $ #{} :js-ffi
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
@@ -2349,7 +2351,7 @@
             render-app!
             add-watch *reel :changes $ fn (reel prev) (render-app!)
             listen-devtools! |k dispatch!
-            js/window.addEventListener |beforeunload $ fn (event) persist-storage!
+            js/window.addEventListener |beforeunload $ fn (event) (persist-storage!)
             js/window.addEventListener |visibilitychange $ fn (event)
               if
                 = |hidden $ unsafe-coerce js/document.visibilityState 'String
@@ -2363,7 +2365,7 @@
                 dispatch! $ :: :hydrate-storage $ parse-cirru-edn (unsafe-coerce raw 'String)
             println "|App started."
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Dynamic)
+          :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
             :features $ #{} :js-ffi
         'mount-target $ %{} 'CodeEntry (:doc |)
@@ -2398,8 +2400,9 @@
           :code $ quote $ defn render-app! ()
             render! mount-target (comp-container @*reel) dispatch!
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Dynamic)
+          :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
+            :features $ #{} :js-ffi
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.main
           :require
@@ -2433,7 +2436,7 @@
               _ $ do (eprintln "|unknown op:" op) store
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'Map 'Tag 'Dynamic) 'Dynamic 'String 'Number
+            :args $ [] (:: 'Map 'Tag 'Dynamic) 'Enum 'String 'Number
             :return $ :: 'Map 'Tag 'Dynamic
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater

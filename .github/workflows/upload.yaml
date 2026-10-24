@@ -2,7 +2,7 @@ name: Upload
 
 on:
   push:
-    branches: [main]
+    branches: [main, prepare/geometry-book-formal031]
   pull_request: {}
 
 permissions:
@@ -54,15 +54,31 @@ jobs:
         test ! -e compact.cirru
         test ! -e package.cirru
         calcit calcit.cirru edit format
-        git diff --exit-code -- calcit.cirru
+        git diff --quiet --exit-code -- calcit.cirru
         calcit calcit.cirru --check-only --all-defs
-        calcit calcit.cirru fix --workflow strict --verify
+        strict_exit=0
+        calcit calcit.cirru fix --workflow strict --verify --format json > /tmp/geometry-book-strict.json || strict_exit=$?
+        jq '{status: .data.workflow.status, diagnostics: [.diagnostics[] | {code, definition, message}]}' /tmp/geometry-book-strict.json
+        test "$strict_exit" -eq 0
+        jq -e '.data.workflow.status == "passed" and .diagnostics == []' /tmp/geometry-book-strict.json
         calcit calcit.cirru --check-only \
           --ns app.comp.container --ns app.config --ns app.main \
           --ns app.schema --ns app.updater \
           --summary-only --format json
         calcit calcit.cirru test --require-match
         calcit calcit.cirru analyze quality --baseline config/calcit-quality.cirru
+
+    - name: Preserve official diagnostic evidence
+      if: always()
+      uses: actions/upload-artifact@v7.0.0
+      with:
+        name: geometry-book-formal-evidence
+        path: |
+          yarn.lock
+          /tmp/geometry-book-strict.json
+          dist
+        if-no-files-found: error
+        retention-days: 3
 
     - name: Select CDN asset path
       id: asset-path
@@ -109,7 +125,7 @@ jobs:
         fi
 
     - name: Upload and verify static assets on COS
-      if: steps.cos-credentials.outputs.available == 'true'
+      if: steps.cos-credentials.outputs.available == 'true' && (github.ref == 'refs/heads/main' || github.event_name == 'pull_request')
       uses: worktools/cos-upload-action@06d6027dcca6413c5936e04a9b6e9f0d5ef71ba0 # v1.2.0
       with:
         source-dir: dist

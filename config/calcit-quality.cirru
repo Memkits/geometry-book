@@ -4,10 +4,10 @@
       :codeNil 0
       :declaredOptional 0
       :deprecatedCalls 0
-      :schemaDynamic 1
+      :schemaDynamic 2
       :typeNone 0
       :typeNotFull 1
-      :unresolved 1
+      :unresolved 2
       :unsafeCoerce 0
     |app.comp.container/card-queue $ {} (:codeDynamic 0)
       :codeNil 0
@@ -1638,33 +1638,60 @@
       :typeNotFull 1
       :unresolved 1
       :unsafeCoerce 0
+    |app.schema/decode-knowledge-doc $ {} (:codeDynamic 0)
+      :codeNil 0
+      :declaredOptional 0
+      :deprecatedCalls 0
+      :schemaDynamic 1
+      :typeNone 0
+      :typeNotFull 1
+      :unresolved 1
+      :unsafeCoerce 0
+    |app.schema/decode-reader-state $ {} (:codeDynamic 0)
+      :codeNil 0
+      :declaredOptional 0
+      :deprecatedCalls 0
+      :schemaDynamic 1
+      :typeNone 0
+      :typeNotFull 1
+      :unresolved 1
+      :unsafeCoerce 0
+    |app.schema/decode-store $ {} (:codeDynamic 0)
+      :codeNil 0
+      :declaredOptional 0
+      :deprecatedCalls 0
+      :schemaDynamic 2
+      :typeNone 0
+      :typeNotFull 1
+      :unresolved 2
+      :unsafeCoerce 0
     |app.schema/store $ {} (:codeDynamic 0)
       :codeNil 0
       :declaredOptional 0
       :deprecatedCalls 0
       :schemaDynamic 1
       :typeNone 0
-      :typeNotFull 0
+      :typeNotFull 1
       :unresolved 1
       :unsafeCoerce 0
     |app.updater/updater $ {} (:codeDynamic 0)
       :codeNil 0
       :declaredOptional 0
       :deprecatedCalls 0
-      :schemaDynamic 1
+      :schemaDynamic 2
       :typeNone 1
       :typeNotFull 1
-      :unresolved 1
+      :unresolved 2
       :unsafeCoerce 0
   :metrics $ {} (:codeDynamic 0)
     :codeNil 0
     :declaredOptional 0
     :deprecatedCalls 0
-    :schemaDynamic 181
-    :typeNone 169
-    :typeNotFull 178
-    :unresolved 180
-    :unsafeCoerce 2
+    :schemaDynamic 17
+    :typeNone 0
+    :typeNotFull 16
+    :unresolved 17
+    :unsafeCoerce 0
   :scope $ {} (:includeDependencies false)
     :namespace nil
     :namespacePrefix nil

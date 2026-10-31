@@ -31,10 +31,10 @@ run `calcit calcit.cirru --watch` in another terminal for live Calcit edits.
 
 本轮用官方 formatter 迁移42处旧类型表示，两个 Markdown 切片改用明确 Option 终点，dispatch 参数由 Dynamic 收窄为 Enum，并绑定既有 app.schema/Op 类型槽。七个条件子节点改用已发布的 Respo `show`，保留原不显示子节点的语义。原四项业务测试通过；unsafe=0、typeNone=0，schemaDynamic/unresolved各17、typeNotFull15，未提高任何预算。
 
-完整门禁仍有两处阻塞，必须解决后再提交可合并 PR：
+完整 strict 仍被条件渲染阻塞，必须解决后再提交可合并 PR：
 
 - Respo 0.17.1 的 `show` 展开为 nil 分支，Calcit 0.32.1 在动态布尔条件的子节点位置报 `E_IMPLICIT_NIL_BRANCH`，已用公开 API 最小复现反馈至 [Respo #327](https://github.com/Respo/respo.calcit/issues/327)。全定义检查为464通过、1失败、4阻塞；完整 strict 同样失败，不以原测试通过代替。
-- 先前候选的质量基线只收紧了全局总量，仍保留旧逐定义余量，0.32.1 明确拒绝总量与逐定义之和不一致。原文件及预算暂未修改；后续应按既有六处授权与实际逐定义证据修复并收紧，不能抬高全局总量放行。
+- 先前候选的质量基线只收紧全局总量，逐定义余量仍旧，导致总量与分项之和不一致。本轮依据官方 weak-types/coverage 的逐定义证据，仅减少已有分项限额并清理已归零项；所有分项均不高于原候选限额，总量 typeNotFull16→15，schemaDynamic/unresolved各17、unsafe/typeNone/codeNil等0不变。官方 baseline 校验及 lower-only 写回均通过；这不替代仍失败的 strict。
 
 先前 #2199 的 Option-none `.filter` 兼容预处理错误本轮未再出现；新条件渲染阻塞与其不同。浏览器阅读/存档验收尚未在本轮完成，不沿用旧记录声明新版通过。
 

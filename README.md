@@ -17,7 +17,7 @@ caps verify --toolchain
 yarn dev
 ```
 
-Use paired formal Calcit CLI/procs 0.30.1, Caps 0.1.1 and Node.js 24. Canonical source/dependencies
+Use paired formal Calcit CLI/procs 0.32.1, Caps 0.1.1 and Node.js 24. Canonical source/dependencies
 are `calcit.cirru` and `deps.cirru`; compact/package snapshots are retired.
 Edit source through the Calcit CLI. `yarn dev` compiles initially and starts Vite;
 run `calcit calcit.cirru --watch` in another terminal for live Calcit edits.
@@ -25,13 +25,18 @@ run `calcit calcit.cirru --watch` in another terminal for live Calcit edits.
 
 ### 迁移候选状态
 
-此分支尚未完成验收，不能按可部署版本使用。现已配对正式 CLI/procs 0.30.1，使用已发布的一致模块图；本地未运行 Caps 或旧 alpha 编译器，CI 独立解析依赖并以 immutable 安装验证锁文件。
+此分支尚未完成验收，不能合并部署。已配对正式 CLI/procs 0.32.1、Caps 0.1.1 与 Node 24；Caps 已严格解析七个已发布模块并通过 toolchain 校验，npm 新解析要求至少发布60分钟，immutable 安装通过。
 
-原 51 篇 Markdown 不变。加载器一次解码为真实文档/关系记录，保留缺失标签与显式空集合的区别；页面、章节、推荐、时间线及阅读状态使用实际类型，不把 Map 强转成 Struct。章节队列已改为真正解包文档，时间线中的章节会打开其父主题并定位到章节。
+沿用此前已准备的类型迁移与已审阅的六个真实边界：原51篇 Markdown 不变，加载器按记录验证文档和关系；保留缺失 tags 与显式空集合的区别、章节队列与父主题定位。存储 key 仍为 `workflow`；存档类型错误仍暂停自动保存并通过原 `hud!` 展示，前端 COS/rsync 路径保持。
 
-存储 key 仍为 `workflow`，原前端 COS/rsync 路径不变。旧 Map 和序列化阅读状态会在恢复边界检查，类型错误会暂停自动保存，避免覆盖原存档；没有放宽原质量基线。
+本轮用官方 formatter 迁移42处旧类型表示，两个 Markdown 切片改用明确 Option 终点，dispatch 参数由 Dynamic 收窄为 Enum，并绑定既有 app.schema/Op 类型槽。七个条件子节点改用已发布的 Respo `show`，保留原不显示子节点的语义。原四项业务测试通过；unsafe=0、typeNone=0，schemaDynamic/unresolved各17、typeNotFull15，未提高任何预算。
 
-当前完整 strict workflow 在正式 0.30.1 中仍被旧迁移预处理阶段的错误拦截，见上游 calcit-lang/calcit#2199 与修复 #2200。该修复提交并非正式 0.30.1 tag 的祖先；本轮官方 Linux CI 全定义468项通过，但完整 strict 再次报告18条 Option-none `.filter` 错误。普通全定义、独立 proof、原生回归与浏览器验收不能替代该门禁。请勿删除 strict 或 baseline 步骤放行，也不为兼容预检添加假的 lambda hint。构建的大包体积警告保留，不提高阈值掩盖。
+完整门禁仍有两处阻塞，必须解决后再提交可合并 PR：
+
+- Respo 0.17.1 的 `show` 展开为 nil 分支，Calcit 0.32.1 在动态布尔条件的子节点位置报 `E_IMPLICIT_NIL_BRANCH`，已用公开 API 最小复现反馈至 [Respo #327](https://github.com/Respo/respo.calcit/issues/327)。全定义检查为464通过、1失败、4阻塞；完整 strict 同样失败，不以原测试通过代替。
+- 先前候选的质量基线只收紧了全局总量，仍保留旧逐定义余量，0.32.1 明确拒绝总量与逐定义之和不一致。原文件及预算暂未修改；后续应按既有六处授权与实际逐定义证据修复并收紧，不能抬高全局总量放行。
+
+先前 #2199 的 Option-none `.filter` 兼容预处理错误本轮未再出现；新条件渲染阻塞与其不同。浏览器阅读/存档验收尚未在本轮完成，不沿用旧记录声明新版通过。
 
 To build:
 

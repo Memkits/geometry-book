@@ -6,14 +6,14 @@
     {} (:description |) (:init-fn 'app.main/main!) (:mode :js) (:reload-fn 'app.main/reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |memof/ |respo-ui.calcit/ |reel.calcit/ |respo-markdown.calcit/
-      :type-slots $ {}
+      :type-slots $ {} $ :dispatch-op |app.schema/Op
   :files $ {}
     'app.comp.container $ %{} 'FileEntry
       :defs $ {}
         '*knowledge-network-instances $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *knowledge-network-instances ({})
           :examples $ []
-          :schema $ :: 'Ref $ :: 'Map 'Dynamic 'Dynamic
+          :schema $ quote $ Ref (Map Dynamic Dynamic)
         'card-queue $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn card-queue (node blueprint)
             let
@@ -22,9 +22,8 @@
                 map queue $ fn (id)
                   option:unwrap $ get knowledge-docs id
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'app.schema/KnowledgeDoc 'app.schema/KnowledgeDoc
-            :return $ :: 'List 'app.schema/KnowledgeDoc
+          :schema $ quote $ Fn app.schema/KnowledgeDoc app.schema/KnowledgeDoc
+            -> $ List app.schema/KnowledgeDoc
         'card-recommendations $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn card-recommendations (selected-id active-card blueprint)
             let
@@ -63,9 +62,8 @@
                                   :kind node
                                   , .unwrap-or :concept
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'String 'app.schema/KnowledgeDoc 'app.schema/KnowledgeDoc
-            :return $ :: 'List 'app.schema/KnowledgeRecommendation
+          :schema $ quote $ Fn String app.schema/KnowledgeDoc app.schema/KnowledgeDoc
+            -> $ List app.schema/KnowledgeRecommendation
         'comp-container $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-container (reel)
             let
@@ -81,8 +79,9 @@
               div ({}) (comp-knowledge-graph cursor reader-state)
                 when dev? $ comp-typed-reel (>> states :reel) reel $ {}
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] $ :: 'reel.typed/State 'app.schema/Op (:: 'Map 'Tag 'Dynamic)
+          :schema $ quote $ Fn
+            reel.typed/State app.schema/Op $ Map Tag Dynamic
+            -> respo.schema/Component
         'comp-global-map-network $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-global-map-network (graph-data)
             [] (effect-knowledge-network graph-data)
@@ -92,8 +91,9 @@
                   {} $ :class-name style-overview-network-note
                   <> "|关系网络 · 拖动空白处平移，滚轮缩放；颜色对应数域、四元数、几何代数与时空主线。"
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] $ :: 'List (:: 'Map 'Tag 'Dynamic)
+          :schema $ quote $ Fn
+            List $ Map Tag Dynamic
+            -> respo.schema/Component
         'comp-heatmap-view $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-heatmap-view (state cursor)
             div
@@ -106,13 +106,9 @@
                 button
                   {} (:class-name style-overview-map-close)
                     :on-click $ fn (e d!)
-                      hint-fn $ {}
-                        :args $ [] (:: 'Map 'Tag 'Dynamic)
-                          :: 'Fn $ {}
-                            :args $ [] 'Dynamic
-                            :rest 'Dynamic
-                            :return 'Unit
-                        :return 'Unit
+                      hint-fn $ Fn (Map Tag Dynamic)
+                        Fn Dynamic & Dynamic $ -> Unit
+                        -> Unit
                       d! $ Op :states cursor $ struct-with state (:view :reader)
                       , &unit
                   <> "|返回阅读"
@@ -174,13 +170,9 @@
                                         , .unwrap-or ||
                                       , "| · " $ :era stage
                                     :on-click $ fn (e d!)
-                                      hint-fn $ {}
-                                        :args $ [] (:: 'Map 'Tag 'Dynamic)
-                                          :: 'Fn $ {}
-                                            :args $ [] 'Dynamic
-                                            :rest 'Dynamic
-                                            :return 'Unit
-                                        :return 'Unit
+                                      hint-fn $ Fn (Map Tag Dynamic)
+                                        Fn Dynamic & Dynamic $ -> Unit
+                                        -> Unit
                                       when (target .some?)
                                         d! $ Op :states cursor $ struct-with
                                           struct-with
@@ -195,8 +187,7 @@
                                     {} $ :class-name style-heatmap-caption
                                     <> $ if (= amount 0) "|暂无卡片" "|点击浏览"
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] 'app.schema/ReaderState $ :: 'List 'Dynamic
+          :schema $ quote $ Fn app.schema/ReaderState (List Dynamic) (-> respo.schema/Component)
         'comp-knowledge-graph $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-knowledge-graph (cursor state)
             let
@@ -222,13 +213,9 @@
                     , .unwrap-or ||
                 timeline-active-id $ timeline-selected .unwrap-or $ timeline-parent .unwrap-or selected-id
                 navigate! $ fn (target-id d!)
-                  hint-fn $ {}
-                    :args $ [] 'String $ :: 'Fn
-                      {}
-                        :args $ [] 'Dynamic
-                        :rest 'Dynamic
-                        :return 'Unit
-                    :return 'Unit
+                  hint-fn $ Fn String
+                    Fn Dynamic & Dynamic $ -> Unit
+                    -> Unit
                   d! $ Op :states cursor $ app.schema/ReaderState :selected target-id :active-section |history :history
                     take-last
                       conj
@@ -263,13 +250,9 @@
                               :class-name $ if current? (str-spaced style-history-node style-history-node-current)
                                 if visited? (str-spaced style-history-node style-history-node-visited) style-history-node
                               :on-click $ fn (e d!)
-                                hint-fn $ {}
-                                  :args $ [] (:: 'Map 'Tag 'Dynamic)
-                                    :: 'Fn $ {}
-                                      :args $ [] 'Dynamic
-                                      :rest 'Dynamic
-                                      :return 'Unit
-                                  :return 'Unit
+                                hint-fn $ Fn (Map Tag Dynamic)
+                                  Fn Dynamic & Dynamic $ -> Unit
+                                  -> Unit
                                 navigate! id d!
                                 , &unit
                             div
@@ -278,7 +261,7 @@
                             div
                               {} $ :class-name style-history-label
                               <> $ :label target
-                          when
+                          show
                             < idx $ dec $ count history-timeline-ids
                             cond
                                 = idx 1
@@ -301,13 +284,9 @@
                           str-spaced style-history-view-toggle style-history-view-toggle-active
                           , style-history-view-toggle
                         :on-click $ fn (e d!)
-                          hint-fn $ {}
-                            :args $ [] (:: 'Map 'Tag 'Dynamic)
-                              :: 'Fn $ {}
-                                :args $ [] 'Dynamic
-                                :rest 'Dynamic
-                                :return 'Unit
-                            :return 'Unit
+                          hint-fn $ Fn (Map Tag Dynamic)
+                            Fn Dynamic & Dynamic $ -> Unit
+                            -> Unit
                           d! $ Op :states cursor $ struct-with state (:view :map)
                           , &unit
                       <> |MAP
@@ -318,13 +297,9 @@
                           str-spaced style-history-view-toggle style-history-view-toggle-active
                           , style-history-view-toggle
                         :on-click $ fn (e d!)
-                          hint-fn $ {}
-                            :args $ [] (:: 'Map 'Tag 'Dynamic)
-                              :: 'Fn $ {}
-                                :args $ [] 'Dynamic
-                                :rest 'Dynamic
-                                :return 'Unit
-                            :return 'Unit
+                          hint-fn $ Fn (Map Tag Dynamic)
+                            Fn Dynamic & Dynamic $ -> Unit
+                            -> Unit
                           d! $ Op :states cursor $ struct-with state (:view :timeline)
                           , &unit
                       <> |TIME
@@ -335,13 +310,9 @@
                           str-spaced style-history-view-toggle style-history-view-toggle-active
                           , style-history-view-toggle
                         :on-click $ fn (e d!)
-                          hint-fn $ {}
-                            :args $ [] (:: 'Map 'Tag 'Dynamic)
-                              :: 'Fn $ {}
-                                :args $ [] 'Dynamic
-                                :rest 'Dynamic
-                                :return 'Unit
-                            :return 'Unit
+                          hint-fn $ Fn (Map Tag Dynamic)
+                            Fn Dynamic & Dynamic $ -> Unit
+                            -> Unit
                           d! $ Op :states cursor $ struct-with state (:view :heatmap)
                           , &unit
                       <> |HEAT
@@ -376,13 +347,9 @@
                               str-spaced style-reader-outline-item style-reader-outline-active
                               , style-reader-outline-item
                             :on-click $ fn (e d!)
-                              hint-fn $ {}
-                                :args $ [] (:: 'Map 'Tag 'Dynamic)
-                                  :: 'Fn $ {}
-                                    :args $ [] 'Dynamic
-                                    :rest 'Dynamic
-                                    :return 'Unit
-                                :return 'Unit
+                              hint-fn $ Fn (Map Tag Dynamic)
+                                Fn Dynamic & Dynamic $ -> Unit
+                                -> Unit
                               d! $ Op :states cursor $ struct-with state
                                 :active-section $ :id section
                               , &unit
@@ -408,13 +375,9 @@
                             [] idx $ button $ {} (:class-name style-reader-nav-button)
                               :inner-text $ :label target
                               :on-click $ fn (e d!)
-                                hint-fn $ {}
-                                  :args $ [] (:: 'Map 'Tag 'Dynamic)
-                                    :: 'Fn $ {}
-                                      :args $ [] 'Dynamic
-                                      :rest 'Dynamic
-                                      :return 'Unit
-                                  :return 'Unit
+                                hint-fn $ Fn (Map Tag Dynamic)
+                                  Fn Dynamic & Dynamic $ -> Unit
+                                  -> Unit
                                 navigate! id d!
                                 , &unit
                   div
@@ -436,13 +399,9 @@
                               [] idx $ button $ {} (:class-name style-reader-history-button)
                                 :inner-text $ str "|←" | $ :label target
                                 :on-click $ fn (e d!)
-                                  hint-fn $ {}
-                                    :args $ [] (:: 'Map 'Tag 'Dynamic)
-                                      :: 'Fn $ {}
-                                        :args $ [] 'Dynamic
-                                        :rest 'Dynamic
-                                        :return 'Unit
-                                    :return 'Unit
+                                  hint-fn $ Fn (Map Tag Dynamic)
+                                    Fn Dynamic & Dynamic $ -> Unit
+                                    -> Unit
                                   navigate! id d!
                                   , &unit
                   div
@@ -456,13 +415,9 @@
                         [] idx $ button
                           {} (:class-name style-reader-relation-button)
                             :on-click $ fn (e d!)
-                              hint-fn $ {}
-                                :args $ [] (:: 'Map 'Tag 'Dynamic)
-                                  :: 'Fn $ {}
-                                    :args $ [] 'Dynamic
-                                    :rest 'Dynamic
-                                    :return 'Unit
-                                :return 'Unit
+                              hint-fn $ Fn (Map Tag Dynamic)
+                                Fn Dynamic & Dynamic $ -> Unit
+                                -> Unit
                               navigate! (:id item) d!
                               , &unit
                           span
@@ -513,7 +468,7 @@
                               <> $
                                 get dimension :value
                                 , .unwrap-or ||
-                    when
+                    show
                         :tags blueprint
                         , .some?
                       list->
@@ -536,13 +491,9 @@
                             str-spaced style-reader-section-card style-reader-section-active
                             , style-reader-section-card
                           :on-click $ fn (e d!)
-                            hint-fn $ {}
-                              :args $ [] (:: 'Map 'Tag 'Dynamic)
-                                :: 'Fn $ {}
-                                  :args $ [] 'Dynamic
-                                  :rest 'Dynamic
-                                  :return 'Unit
-                              :return 'Unit
+                            hint-fn $ Fn (Map Tag Dynamic)
+                              Fn Dynamic & Dynamic $ -> Unit
+                              -> Unit
                             d! $ Op :states cursor $ struct-with state
                               :active-section $ :id section
                             , &unit
@@ -570,7 +521,7 @@
                           comp-md-block
                             markdown-body-without-title $ :content section
                             {}
-                        when
+                        show
                           not $ empty? $
                             :links section
                             , .unwrap-or ([])
@@ -601,13 +552,9 @@
                       [] idx $ button
                         {} (:class-name style-reader-related-card)
                           :on-click $ fn (e d!)
-                            hint-fn $ {}
-                              :args $ [] (:: 'Map 'Tag 'Dynamic)
-                                :: 'Fn $ {}
-                                  :args $ [] 'Dynamic
-                                  :rest 'Dynamic
-                                  :return 'Unit
-                              :return 'Unit
+                            hint-fn $ Fn (Map Tag Dynamic)
+                              Fn Dynamic & Dynamic $ -> Unit
+                              -> Unit
                             navigate! (:id item) d!
                             , &unit
                         div
@@ -619,7 +566,7 @@
                         div
                           {} $ :class-name style-reader-related-summary
                           <> $ :summary item
-                        when
+                        show
                             Option :some $ :tags item
                             , .some?
                           div
@@ -633,7 +580,7 @@
                                   [] tag-idx $ span
                                     {} $ :class-name style-reader-tag
                                     <> $ str |# tag
-                when map-view? $ div
+                show map-view? $ div
                   {} $ :class-name style-overview-map
                   div
                     {} $ :class-name style-overview-map-head
@@ -643,13 +590,9 @@
                     button
                       {} (:class-name style-overview-map-close)
                         :on-click $ fn (e d!)
-                          hint-fn $ {}
-                            :args $ [] (:: 'Map 'Tag 'Dynamic)
-                              :: 'Fn $ {}
-                                :args $ [] 'Dynamic
-                                :rest 'Dynamic
-                                :return 'Unit
-                            :return 'Unit
+                          hint-fn $ Fn (Map Tag Dynamic)
+                            Fn Dynamic & Dynamic $ -> Unit
+                            -> Unit
                           d! $ Op :states cursor $ struct-with state (:view :reader)
                           , &unit
                       <> "|返回阅读"
@@ -666,15 +609,14 @@
                     span ({}) (<> "|浅紫：四元数与旋转")
                     span ({}) (<> "|浅绿：外代数与几何代数")
                     span ({}) (<> "|浅橙：时空、旋量与量子")
-                when
+                show
                   = (:view state) :timeline
                   comp-timeline-view state cursor
-                when
+                show
                   = (:view state) :heatmap
                   comp-heatmap-view state cursor
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] (:: 'List 'Dynamic) 'app.schema/ReaderState
+          :schema $ quote $ Fn (List Dynamic) app.schema/ReaderState (-> respo.schema/Component)
         'comp-timeline-view $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-timeline-view (state cursor)
             div
@@ -687,13 +629,9 @@
                 button
                   {} (:class-name style-overview-map-close)
                     :on-click $ fn (e d!)
-                      hint-fn $ {}
-                        :args $ [] (:: 'Map 'Tag 'Dynamic)
-                          :: 'Fn $ {}
-                            :args $ [] 'Dynamic
-                            :rest 'Dynamic
-                            :return 'Unit
-                        :return 'Unit
+                      hint-fn $ Fn (Map Tag Dynamic)
+                        Fn Dynamic & Dynamic $ -> Unit
+                        -> Unit
                       d! $ Op :states cursor $ struct-with state (:view :reader)
                       , &unit
                   <> "|返回阅读"
@@ -770,13 +708,9 @@
                                             [] id $ button
                                               {} (:class-name style-timeline-event)
                                                 :on-click $ fn (e d!)
-                                                  hint-fn $ {}
-                                                    :args $ [] (:: 'Map 'Tag 'Dynamic)
-                                                      :: 'Fn $ {}
-                                                        :args $ [] 'Dynamic
-                                                        :rest 'Dynamic
-                                                        :return 'Unit
-                                                    :return 'Unit
+                                                  hint-fn $ Fn (Map Tag Dynamic)
+                                                    Fn Dynamic & Dynamic $ -> Unit
+                                                    -> Unit
                                                   d! $ Op :states cursor $ struct-with
                                                     struct-with state $ :view :reader
                                                     :selected $ if
@@ -820,8 +754,7 @@
                               <> "|带向下一阶段"
                             <> $ :handoff stage
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] 'app.schema/ReaderState $ :: 'List 'Dynamic
+          :schema $ quote $ Fn app.schema/ReaderState (List Dynamic) (-> respo.schema/Component)
         'effect-knowledge-network $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defeffect effect-knowledge-network (graph-data) (action el at-place?)
             when (= action :mount) (fcose cytoscape)
@@ -878,23 +811,22 @@
                   reset! *knowledge-network-instances $ dissoc @*knowledge-network-instances el
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Effect)
-            :args $ [] $ :: 'List (:: 'Map 'Tag 'Dynamic)
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn
+            List $ Map Tag Dynamic
+            -> respo.schema/Effect
+            :features :js-ffi
         'find-card-blueprint $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn find-card-blueprint (id) (get knowledge-docs id)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'String
-            :return $ :: 'Option 'app.schema/KnowledgeDoc
+          :schema $ quote $ Fn String
+            -> $ Option app.schema/KnowledgeDoc
         'find-knowledge-node $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn find-knowledge-node (id)
             find knowledge-nodes $ fn (node)
               = id $ :id node
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'String
-            :return $ :: 'Option 'app.schema/KnowledgeDoc
+          :schema $ quote $ Fn String
+            -> $ Option app.schema/KnowledgeDoc
         'graph-domain-key $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn graph-domain-key (doc)
             let
@@ -910,8 +842,7 @@
                   , |spacetime
                 true |geometric
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ [] 'app.schema/KnowledgeDoc
+          :schema $ quote $ Fn app.schema/KnowledgeDoc (-> String)
         'heatmap-domains $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def heatmap-domains
             []
@@ -920,7 +851,7 @@
               {} (:key |geometric) (:label "|外代数与几何")
               {} (:key |spacetime) (:label "|时空与量子")
           :examples $ []
-          :schema $ :: 'List $ :: 'Map 'Tag 'String
+          :schema $ quote $ List (Map Tag String)
         'historical-stages $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def historical-stages
             []
@@ -950,27 +881,25 @@
                   app.schema/HistoryBranch :title "|旋转群支线" :note "|SO(3)描述可见的三维旋转，SU(2)是其双重覆盖。rotor以共轭作用旋转向量，避免欧拉角奇异并保留组合次序。" :ids $ [] |so3 |rotor |reflection
                   app.schema/HistoryBranch :title "|工程与计算支线" :note "|四元数和几何代数不只是历史遗产：姿态估计、传感器融合、骨骼动画、相机控制与共形模型仍在直接使用它们。" :ids $ [] |robotics |computer-graphics |conformal-geometric-algebra
           :examples $ []
-          :schema $ :: 'List 'app.schema/HistoryStage
+          :schema $ quote $ List app.schema/HistoryStage
         'history-milestone-era $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn history-milestone-era (id)
             match id (|complex-numbers "|1545—1831") (|quaternions |1843) (|grassmann |1844) (|clifford-algebra |1878) (|minkowski-spacetime |1908) (|spinor |1913) (|dirac-equation |1928) (_ "|跨时期")
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ [] 'String
+          :schema $ quote $ Fn String (-> String)
         'history-timeline-ids $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def history-timeline-ids ([] |complex-numbers |quaternions |grassmann |clifford-algebra |minkowski-spacetime |spinor |dirac-equation)
           :examples $ []
-          :schema $ :: 'List 'String
+          :schema $ quote $ List String
         'kind-label $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn kind-label (kind)
             match kind (:concept "|核心概念") (:theorem "|定理与公式") (:person "|历史人物") (:operation "|代数运算") (:principle "|基本原理") (:structure "|数学结构") (:representation "|几何表示") (:application "|现实应用") (_ "|知识节点")
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ [] 'Tag
+          :schema $ quote $ Fn Tag (-> String)
         'knowledge-bundle $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def knowledge-bundle (load-knowledge-docs)
           :examples $ []
-          :schema $ :: 'app.schema/KnowledgeBundle
+          :schema $ quote app.schema/KnowledgeBundle
         'knowledge-dimensions $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn knowledge-dimensions (doc)
             []
@@ -987,9 +916,8 @@
                   :kind doc
                   , .unwrap-or :concept
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'app.schema/KnowledgeDoc
-            :return $ :: 'List $ :: 'Map 'Tag 'String
+          :schema $ quote $ Fn app.schema/KnowledgeDoc
+            -> $ List $ Map Tag String
         'knowledge-doc-reference-ids $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn knowledge-doc-reference-ids (doc)
             let
@@ -1007,13 +935,12 @@
                     option:unwrap-or (:target relation) ||
                     option:unwrap-or (:source relation) ||
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'app.schema/KnowledgeDoc
-            :return $ :: 'List 'String
+          :schema $ quote $ Fn app.schema/KnowledgeDoc
+            -> $ List String
         'knowledge-docs $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def knowledge-docs (:docs knowledge-bundle)
           :examples $ []
-          :schema $ :: 'Map 'String 'app.schema/KnowledgeDoc
+          :schema $ quote $ Map String app.schema/KnowledgeDoc
         'knowledge-edges $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def knowledge-edges
             mapcat
@@ -1036,7 +963,7 @@
                           :kind relation
                           , .unwrap-or :related
           :examples $ []
-          :schema $ :: 'List 'app.schema/KnowledgeEdge
+          :schema $ quote $ List app.schema/KnowledgeEdge
         'knowledge-network-elements $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn knowledge-network-elements ()
             concat
@@ -1059,9 +986,8 @@
                   :label $ :relation edge
                   :kind $ :kind edge
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ []
-            :return $ :: 'List $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn
+            -> $ List $ Map Tag Dynamic
         'knowledge-nodes $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def knowledge-nodes
             filter
@@ -1071,7 +997,7 @@
                   :kind doc
                   , .unwrap-or :concept
           :examples $ []
-          :schema $ :: 'List 'app.schema/KnowledgeDoc
+          :schema $ quote $ List app.schema/KnowledgeDoc
         'load-knowledge-docs $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defmacro load-knowledge-docs ()
             let
@@ -1082,9 +1008,11 @@
                       closing-index $ inc $ option:unwrap
                         find-index (rest lines)
                           fn (line) (= line |---)
-                      metadata $ parse-cirru-edn $ join-string (slice lines 1 closing-index) "|\n"
+                      metadata $ parse-cirru-edn $ join-string
+                        slice lines 1 $ Option :some closing-index
+                        , "|\n"
                       body $ join-string
-                        slice lines (inc closing-index) (count lines)
+                        slice lines (inc closing-index) (Option :none)
                         , "|\n"
                       doc $ assoc
                         assoc (assoc metadata :content body) :source path
@@ -1120,10 +1048,9 @@
                   :diagnostics diagnostics
               quasiquote $ decode-map-as (parse-cirru-edn ~serialized) 'app.schema/KnowledgeBundle
           :examples $ []
-          :schema $ :: 'Macro $ {}
-            :capabilities $ #{} :fs-read :log
-            :expansion $ :: 'Expr 'app.schema/KnowledgeBundle
-            :required $ []
+          :schema $ quote $ Macro
+            -> $ Expr app.schema/KnowledgeBundle
+            :capabilities :fs-read :log
           :tests $ [] $ %{} 'TestEntry (:name |all-original-markdown-documents)
             :code $ quote $ let
                 bundle knowledge-bundle
@@ -1147,8 +1074,7 @@
                 join-string (rest lines) "|\n"
                 , content
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ [] 'String
+          :schema $ quote $ Fn String (-> String)
         'markdown-chapter-cards $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn markdown-chapter-cards (doc)
             let
@@ -1186,9 +1112,8 @@
                           , .unwrap-or $ []
                         , :parent (Option :none) :queue (Option :none) :relations $ Option :none
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'app.schema/KnowledgeDoc
-            :return $ :: 'List 'app.schema/KnowledgeDoc
+          :schema $ quote $ Fn app.schema/KnowledgeDoc
+            -> $ List app.schema/KnowledgeDoc
         'number-domain-label $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn number-domain-label (doc)
             let
@@ -1206,8 +1131,7 @@
                   , "|时空与算子代数"
                 true "|跨结构"
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ [] 'app.schema/KnowledgeDoc
+          :schema $ quote $ Fn app.schema/KnowledgeDoc (-> String)
         'related-knowledge-nodes $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn related-knowledge-nodes (id)
             map
@@ -1228,9 +1152,8 @@
                     :relation $ :relation edge
                     :direction $ if outgoing? "|→" "|←"
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'String
-            :return $ :: 'List $ :: 'Map 'Tag 'String
+          :schema $ quote $ Fn String
+            -> $ List $ Map Tag String
         'section-links-text $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn section-links-text (section)
             let
@@ -1244,8 +1167,7 @@
                     (:title doc) .unwrap-or $ :label target
               join-string labels "| · "
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ [] 'app.schema/KnowledgeDoc
+          :schema $ quote $ Fn app.schema/KnowledgeDoc (-> String)
         'space-dimension-label $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn space-dimension-label (doc)
             let
@@ -1263,115 +1185,114 @@
                   , "|nD 可扩展"
                 true "|结构维度"
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ [] 'app.schema/KnowledgeDoc
+          :schema $ quote $ Fn app.schema/KnowledgeDoc (-> String)
         'style-heatmap-board $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-heatmap-board
             {} $ |& $ {} (:max-width |1480px) (:margin "|24px auto") (:border "|1px solid #d6e5f4") (:border-radius |10px) (:background "|rgba(255,255,255,.72)") (:padding |16px) (:overflow-x |auto)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-heatmap-caption $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-heatmap-caption
             {} $ |& $ {} (:margin-top |5px) (:font-size |11px) (:color |#7891aa)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-heatmap-cell $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-heatmap-cell
             {}
               |& $ {} (:min-height |92px) (:border "|1px solid #bdd7ee") (:border-radius |8px) (:background |#edf7ff) (:color |#356284) (:cursor |pointer)
               |&:hover $ {} (:background |#dff1ff) (:border-color |#7eb5e6)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-heatmap-cell-empty $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-heatmap-cell-empty
             {} $ |& $ {} (:background |#fbfdff) (:border-color |#e1ebf5) (:color |#9aabbb)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-heatmap-cell-light $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-heatmap-cell-light
             {} $ |& $ {} (:background |#eff8ff) (:border-color |#c4def3)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-heatmap-cell-medium $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-heatmap-cell-medium
             {} $ |& $ {} (:background |#dcefff) (:border-color |#a5cee9)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-heatmap-cell-strong $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-heatmap-cell-strong
             {} $ |& $ {} (:background |#c1e1f8) (:border-color |#7db8df) (:color |#24567d)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-heatmap-count $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-heatmap-count
             {} $ |& $ {} (:font-size |28px) (:font-weight |700) (:line-height |1.1)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-heatmap-head $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-heatmap-head
             {} $ |& $ {} (:padding |10px) (:color |#637f9d) (:font-size |12px) (:font-weight |700) (:text-align |center)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-heatmap-head-row $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-heatmap-head-row
             {} $ |& $ {} (:display |grid) (:grid-template-columns "|170px repeat(5, minmax(150px, 1fr))") (:gap |8px) (:min-width |950px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-heatmap-row $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-heatmap-row
             {} $ |& $ {} (:display |grid) (:grid-template-columns "|170px repeat(5, minmax(150px, 1fr))") (:gap |8px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-heatmap-row-label $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-heatmap-row-label
             {} $ |& $ {} (:display |flex) (:align-items |center) (:padding |10px) (:color |#3d5d7d) (:font-size |13px) (:font-weight |700)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-heatmap-rows $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-heatmap-rows
             {} $ |& $ {} (:display |flex) (:flex-direction |column) (:gap |8px) (:margin-top |8px) (:min-width |950px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-history-caption $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-history-caption
             {} $ |& $ {} (:margin-top |1px) (:font-size |11px) (:font-weight |680) (:color |#50647f)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-history-connector $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-history-connector
             {} $ |& $ {} (:display |flex) (:align-items |center) (:justify-content |center) (:flex "|0 0 10px") (:margin "|0 1px") (:font-size |10px) (:font-weight |700) (:color |#b4c3d4)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-history-connector-group $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-history-connector-group
             {} $ |& $ {} (:display |flex) (:align-items |center) (:justify-content |center) (:flex "|0 0 42px") (:margin "|0 2px") (:font-size |9px) (:font-weight |720) (:letter-spacing |0.03em) (:color |#91a6c0) (:white-space |nowrap)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-history-era $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-history-era
             {} $ |& $ {} (:font-family "|ui-monospace, SFMono-Regular, Menlo, monospace") (:font-size |9px) (:font-weight |650) (:letter-spacing |0.06em) (:color |#9aacbf) (:white-space |nowrap) (:overflow |hidden) (:text-overflow |ellipsis)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-history-item $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-history-item
             {} $ |& $ {} (:display |flex) (:align-items |center) (:flex "|0 0 auto") (:min-width |0px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-history-kicker $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-history-kicker
             {} $ |& $ {} (:font-size |9px) (:font-weight |760) (:letter-spacing |0.15em) (:color |#91a5bd)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-history-label $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-history-label
             {} $ |& $ {} (:margin-top |0px) (:font-size |11px) (:font-weight |720) (:line-height |1.25) (:white-space |nowrap) (:overflow |hidden) (:text-overflow |ellipsis)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-history-map-toggle $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-history-map-toggle
             {} $ |& $ {} (:flex "|0 0 auto") (:padding "|5px 7px") (:border "|1px solid #cbdff4") (:border-radius |6px) (:background |#ffffff) (:color |#3b6895) (:font-size |10px) (:font-weight |700) (:letter-spacing |.06em) (:cursor |pointer)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-history-node $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-history-node
             {}
@@ -1383,50 +1304,50 @@
                 :gap |4px
               |&:hover $ {} (:transform "|translateY(-1px)") (:border-color |#bfd5ef) (:background |#ffffff) (:box-shadow "|0 6px 16px rgba(89, 125, 170, .09)")
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-history-node-current $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-history-node-current
             {} $ |& $ {} (:border-color |#9fc3ef) (:background "|linear-gradient(145deg, #ffffff, #eef6ff)") (:color |#34587f)
               :box-shadow "|0 0 0 2px rgba(152, 194, 242, .16), 0 7px 18px rgba(83, 125, 176, .10)"
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-history-node-visited $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-history-node-visited
             {} $ |& $ {} (:background |#f7fbff) (:border-color |#d2e2f3) (:color |#71859e)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-history-overview $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-history-overview
             {} $ |& $ {} (:display |flex) (:align-items |center) (:gap |5px) (:flex "|0 0 116px") (:min-width |116px) (:padding-left |2px) (:white-space |nowrap)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-history-timeline $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-history-timeline
             {} $ |& $ {} (:grid-column "|1 / -1") (:display |flex) (:align-items |center) (:gap |12px) (:min-height |52px) (:box-sizing |border-box) (:padding "|6px 14px") (:background "|rgba(250, 253, 255, .90)") (:border-bottom "|1px solid #dce9f6") (:box-shadow "|0 8px 28px rgba(82, 117, 166, .06)") (:backdrop-filter "|blur(18px)") (:z-index |10)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-history-track $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-history-track
             {} $ |& $ {} (:display |flex) (:align-items |center) (:flex |1) (:min-width |0px) (:overflow-x |auto) (:padding "|2px 0 4px")
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-history-view-switcher $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-history-view-switcher
             {} $ |& $ {} (:display |flex) (:gap |6px) (:margin-left |12px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-history-view-toggle $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-history-view-toggle
             {}
               |& $ {} (:border "|1px solid #c9dcee") (:border-radius |7px) (:background |#f8fbff) (:color |#547391) (:padding "|6px 9px") (:font-size |11px) (:font-weight |700) (:letter-spacing |0.4px) (:cursor |pointer)
               |&:hover $ {} (:background |#eef7ff) (:color |#2e67a1)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-history-view-toggle-active $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-history-view-toggle-active
             {} $ |& $ {} (:border "|1px solid #83b5e8") (:background |#e1f0ff) (:color |#1f5e99) (:box-shadow "|0 2px 7px rgba(63, 125, 190, .16)")
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-card $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-card
             {}
@@ -1434,228 +1355,228 @@
                 :transition "|transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease"
               |&:hover $ {} (:transform "|translateY(-2px)") (:border-color |#afd2f5) (:box-shadow "|0 10px 22px rgba(74, 125, 181, .12)")
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-card-era $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-card-era
             {} $ |& $ {} (:font-size |10px) (:font-weight |720) (:letter-spacing |.08em) (:color |#7190b1)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-card-list $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-card-list
             {} $ |& $ {} (:display |flex) (:flex-direction |column) (:gap |10px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-card-meta $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-card-meta
             {} $ |& $ {} (:display |flex) (:align-items |center) (:justify-content |space-between) (:gap |6px) (:font-size |10px) (:font-weight |700) (:letter-spacing |.04em) (:color |#7190b1)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-card-metric $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-card-metric
             {} $ |& $ {} (:padding "|3px 5px") (:border-radius |4px) (:background |#eff5fb)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-card-metrics $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-card-metrics
             {} $ |& $ {} (:display |flex) (:flex-wrap |wrap) (:gap |4px) (:margin-top |9px) (:font-size |10px) (:color |#66809d)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-card-summary $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-card-summary
             {} $ |& $ {} (:font-size |12px) (:line-height |1.55) (:color |#62768e)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-card-title $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-card-title
             {} $ |& $ {} (:margin "|4px 0 6px") (:font-size |16px) (:font-weight |720) (:color |#2a4c70)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-lane $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-lane
             {} $ |& $ {} (:min-height |0px) (:padding |15px) (:border "|1px solid #d8e7f5") (:border-radius |12px) (:background "|rgba(255,255,255,.72)") (:box-shadow "|0 12px 32px rgba(83, 119, 165, .07)")
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-lane-note $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-lane-note
             {} $ |& $ {} (:margin "|5px 0 15px") (:font-size |12px) (:line-height |1.45) (:color |#71839a)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-lane-title $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-lane-title
             {} $ |& $ {} (:font-size |17px) (:font-weight |720) (:color |#294b70)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-map $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-map
             {} $ |& $ {} (:position |fixed) (:top |52px) (:right |0px) (:bottom |0px) (:left |0px) (:z-index |20) (:box-sizing |border-box) (:overflow-y |auto) (:padding "|26px 32px 36px")
               :background "|linear-gradient(135deg, #f6fbff 0%, #fbf9ff 52%, #f2fcfb 100%)"
               :color |#263650
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-map-close $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-map-close
             {} $ |& $ {} (:padding "|8px 11px") (:border "|1px solid #bdd8f4") (:border-radius |7px) (:background |#ffffff) (:color |#3d6a98) (:font-size |12px) (:font-weight |650) (:cursor |pointer)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-map-grid $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-map-grid
             {} $ |& $ {} (:display |grid) (:grid-template-columns "|repeat(4, minmax(240px, 1fr))") (:gap |14px) (:margin "|0px auto") (:max-width |1740px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-map-head $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-map-head
             {} $ |& $ {} (:display |flex) (:align-items |center) (:justify-content |space-between) (:gap |20px) (:margin "|0 auto 24px") (:max-width |1500px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-map-kicker $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-map-kicker
             {} $ |& $ {} (:font-size |10px) (:font-weight |760) (:letter-spacing |.14em) (:color |#6080a2)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-map-note $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-map-note
             {} $ |& $ {} (:margin "|4px auto 18px") (:max-width |1740px) (:font-size |13px) (:line-height |1.45) (:color |#667d98)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-map-summary $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-map-summary
             {} $ |& $ {} (:display |flex) (:gap |10px) (:flex-wrap |wrap) (:max-width |1740px) (:margin "|0 auto 10px") (:color |#6e86a2) (:font-size |13px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-map-title $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-map-title
             {} $ |& $ {} (:margin-top |5px) (:font-size |27px) (:font-weight |720) (:letter-spacing |-.035em) (:color |#1e3858)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-network $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-network
             {} $ |& $ {} (:height "|calc(100vh - 176px)") (:min-height |760px) (:margin "|0 auto 16px") (:max-width |1740px) (:border "|1px solid #d7e7f5") (:border-radius |12px) (:background "|rgba(255,255,255,.78)") (:box-shadow "|0 10px 30px rgba(83, 119, 165, .07)") (:overflow |hidden) (:position |relative)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-overview-network-note $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-overview-network-note
             {} $ |& $ {} (:position |absolute) (:top |12px) (:left |14px) (:z-index |2) (:padding "|5px 7px") (:border "|1px solid rgba(193, 216, 238, .84)") (:border-radius |5px) (:background "|rgba(250,253,255,.90)") (:color |#607a98) (:font-size |11px) (:pointer-events |none)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-article-head $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-article-head
             {} $ |& $ {} (:max-width |1180px) (:margin |0) (:padding "|8px 0 24px") (:border-bottom "|1px solid #d6e6f7")
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-article-summary $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-article-summary
             {} $ |& $ {} (:margin-top |18px) (:max-width |790px) (:font-size |19px) (:line-height |1.72) (:color |#536278)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-article-title $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-article-title
             {} $ |& $ {} (:margin-top |10px) (:font-size "|clamp(36px, 4vw, 58px)") (:font-weight |780) (:letter-spacing |-0.05em) (:line-height |1.05)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-brand $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-brand
             {} $ |& $ {} (:padding "|4px 4px 24px") (:border-bottom "|1px solid #d6dee9")
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-brand-note $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-brand-note
             {} $ |& $ {} (:margin-top |8px) (:font-size |14px) (:line-height |1.55) (:color |#69788d)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-brand-title $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-brand-title
             {} $ |& $ {} (:margin-top |9px) (:font-size |25px) (:font-weight |760) (:letter-spacing |-0.025em)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-detail-body $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-detail-body
             {} $ |& $ {} (:margin-top |26px) (:font-size |18px) (:line-height |1.9) (:color |#435167)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-detail-divider $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-detail-divider
             {} $ |& $ {} (:height |1px) (:margin "|34px 0 26px") (:background |#e4e9f0)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-detail-hint $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-detail-hint
             {} $ |& $ {} (:margin-top |8px) (:font-size |14px) (:color |#8a96a7)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-detail-kicker $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-detail-kicker
             {} $ |& $ {} (:font-size |11px) (:font-weight |760) (:letter-spacing |0.15em) (:color |#7390b7)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-detail-subtitle $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-detail-subtitle
             {} $ |& $ {} (:font-size |15px) (:font-weight |730) (:color |#243550)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-detail-title $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-detail-title
             {} $ |& $ {} (:margin-top |11px) (:font-size |31px) (:font-weight |770) (:letter-spacing |-0.035em)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-dimension-card $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-dimension-card
             {} $ |& $ {} (:min-width 0) (:padding "|10px 12px 12px") (:border "|1px solid #d8e6f5") (:border-radius |8px)
               :background "|linear-gradient(145deg, rgba(255,255,255,.92), rgba(242,247,255,.84))"
               :box-shadow "|0 5px 16px rgba(82,117,166,.06)"
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-dimension-grid $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-dimension-grid
             {} $ |& $ {} (:display |grid) (:grid-template-columns "|repeat(4, minmax(0, 1fr))") (:gap |8px) (:margin-top |20px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-dimension-label $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-dimension-label
             {} $ |& $ {} (:font-size |10px) (:font-weight |700) (:letter-spacing |0.08em) (:color |#8292aa)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-dimension-value $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-dimension-value
             {} $ |& $ {} (:margin-top |5px) (:font-size |14px) (:font-weight |680) (:color |#3c567a) (:white-space |nowrap) (:overflow |hidden) (:text-overflow |ellipsis)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-empty-note $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-empty-note
             {} $ |& $ {} (:padding "|10px 4px") (:font-size |13px) (:line-height |1.5) (:color |#73849e)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-eyebrow $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-eyebrow
             {} $ |& $ {} (:font-size |11px) (:font-weight |750) (:letter-spacing |0.16em) (:color |#5b77a1)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-formula $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-formula
             {} $ |& $ {} (:margin-top |22px) (:display |inline-block) (:padding "|13px 17px") (:border "|1px solid #cbd9ec") (:border-radius |10px) (:background |#eaf0f8) (:font-family "|ui-monospace, SFMono-Regular, Menlo, monospace") (:font-size |18px) (:color |#234d88)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-history-button $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-history-button
             {}
               |& $ {} (:width |100%) (:min-height |40px) (:padding "|8px 12px") (:border "|1px solid #dce7f3") (:border-radius |8px) (:background "|rgba(255,255,255,.72)") (:color |#53657f) (:font-size |14px) (:font-weight |600) (:text-align |left) (:cursor |pointer)
               |&:hover $ {} (:border-color |#b8d1f1) (:background |#f6faff)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-left $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-left
             {} $ |& $ {} (:height |100%) (:box-sizing |border-box) (:padding "|20px 16px 32px") (:background "|rgba(247, 251, 255, .82)") (:overflow-y |auto) (:border-right "|1px solid #d9e7f6") (:box-shadow "|8px 0 30px rgba(85, 119, 166, .07)") (:backdrop-filter "|blur(18px)") (:min-height |0px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-meta $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-meta
             {} $ |& $ {} (:font-size |13px) (:font-weight |720) (:letter-spacing |0.08em) (:color |#5b77a1)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-middle $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-middle
             {} $ |& $ {} (:height |100%) (:box-sizing |border-box) (:padding "|24px clamp(24px, 2.5vw, 48px) 48px") (:background "|rgba(255, 255, 255, .76)") (:overflow-y |auto) (:backdrop-filter "|blur(12px)") (:min-height |0px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-nav-button $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-nav-button
             {}
@@ -1663,32 +1584,32 @@
                 :transition "|border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease"
               |&:hover $ {} (:border-color |#b4cff1) (:box-shadow "|0 10px 22px rgba(82,117,166,.12)") (:transform "|translateY(-1px)")
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-nav-list $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-nav-list
             {} $ |& $ {} (:display |flex) (:flex-direction |column) (:gap |10px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-nav-section $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-nav-section
             {} $ |& $ {} (:margin-top |27px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-nav-title $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-nav-title
             {} $ |& $ {} (:margin "|0 4px 11px") (:font-size |12px) (:font-weight |720) (:letter-spacing |0.1em) (:color |#8091ab)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-outline-active $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-outline-active
             {} $ |& $ {} (:background |#f8fbff) (:border-color |#b9d7f6) (:color |#24598c) (:box-shadow "|0 4px 12px rgba(81, 135, 194, .08)")
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-outline-index $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-outline-index
             {} $ |& $ {} (:flex "|0 0 19px") (:width |19px) (:height |19px) (:border-radius |50%) (:background |#eaf2fb) (:color |#7591af) (:font-size |9px) (:font-weight |700) (:line-height |19px) (:text-align |center)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-outline-item $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-outline-item
             {}
@@ -1696,17 +1617,17 @@
                 :transition "|background-color 150ms ease, border-color 150ms ease, color 150ms ease"
               |&:hover $ {} (:background |#ffffff) (:border-color |#d8e6f5) (:color |#435b78)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-outline-label $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-outline-label
             {} $ |& $ {} (:overflow |hidden) (:white-space |nowrap) (:text-overflow |ellipsis)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-outline-list $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-outline-list
             {} $ |& $ {} (:display |flex) (:flex-direction |column) (:gap |4px) (:margin-top |8px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-page $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-page
             {} $ |& $ {} (:position |fixed) (:inset 0) (:display |grid) (:grid-template-columns "|272px minmax(680px, 1fr) minmax(340px, 410px)")
@@ -1716,7 +1637,7 @@
               :overflow |hidden
               :grid-template-rows "|auto minmax(0, 1fr)"
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-related-card $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-related-card
             {}
@@ -1728,27 +1649,27 @@
                 :transition "|border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, background-color 160ms ease"
               |&:hover $ {} (:border-color |#afcbef) (:border-top-color |#82aef2) (:background |#f7fbff) (:box-shadow "|0 12px 30px rgba(82,117,166,.13)") (:transform "|translateY(-2px)")
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-related-cards $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-related-cards
             {} $ |& $ {} (:display |flex) (:flex-direction |column) (:gap |8px) (:margin-top |18px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-related-relation $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-related-relation
             {} $ |& $ {} (:font-size |11px) (:font-weight |720) (:color |#6f8caf)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-related-summary $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-related-summary
             {} $ |& $ {} (:margin-top |6px) (:font-size |13px) (:line-height |1.5) (:color |#788596)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-related-title $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-related-title
             {} $ |& $ {} (:margin-top |5px) (:font-size |16px) (:font-weight |710) (:color |#26364e)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-relation-button $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-relation-button
             {}
@@ -1756,22 +1677,22 @@
                 :transition "|border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease"
               |&:hover $ {} (:border-color |#b2cef1) (:transform "|translateY(-1px)") (:box-shadow "|0 10px 24px rgba(82,117,166,.11)")
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-relation-name $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-relation-name
             {} $ |& $ {} (:font-size |14px) (:font-weight |650) (:color |#26364e)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-relation-tag $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-relation-tag
             {} $ |& $ {} (:font-size |11px) (:font-weight |700) (:color |#7fa6dd)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-right $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-right
             {} $ |& $ {} (:height |100%) (:box-sizing |border-box) (:padding "|24px 20px 40px") (:background "|rgba(248, 251, 255, .82)") (:border-left "|1px solid #d9e7f6") (:box-shadow "|-8px 0 30px rgba(85, 119, 166, .06)") (:overflow-y |auto) (:backdrop-filter "|blur(18px)") (:min-height |0px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-section-active $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-section-active
             {} $ |& $ {} (:border-color |#a9c9f4) (:border-left-color |#79a9ef)
@@ -1779,7 +1700,7 @@
               :box-shadow "|0 16px 38px rgba(100, 126, 189, .16), 0 0 0 1px rgba(137,178,238,.12)"
               :transform "|translateY(-2px)"
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-section-card $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-section-card
             {}
@@ -1793,107 +1714,107 @@
               |&:hover $ {} (:border-color |#a9c9f4) (:border-left-color |#82aef2) (:transform "|translateY(-2px)")
                 :box-shadow "|0 14px 34px rgba(82, 117, 166, .14), 0 0 0 1px rgba(166,203,247,.18)"
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-section-footer $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-section-footer
             {} $ |& $ {} (:display |flex) (:align-items |baseline) (:gap |10px) (:margin-top |18px) (:padding-top |11px) (:border-top "|1px solid #e8f0f8") (:font-size |12px) (:line-height |1.5) (:color |#8b9bb0)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-section-footer-label $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-section-footer-label
             {} $ |& $ {} (:flex-shrink |0) (:font-size |10px) (:font-weight |720) (:letter-spacing |0.11em) (:text-transform |uppercase) (:color |#a2b0c2)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-section-footer-links $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-section-footer-links
             {} $ |& $ {} (:overflow |hidden) (:text-overflow |ellipsis) (:white-space |nowrap) (:color |#7e90a8)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-section-grid $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-section-grid
             {} $ |& $ {} (:max-width |1180px) (:margin "|16px 0 0") (:display |flex) (:flex-direction |column) (:gap |12px) (:padding-bottom |24px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-section-head $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-section-head
             {} $ |& $ {} (:display |flex) (:align-items |baseline) (:justify-content |space-between) (:gap |18px) (:width |100%)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-section-heading $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-section-heading
             {} $ |& $ {} (:display |flex) (:align-items |baseline) (:min-width |0px) (:flex |1)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-section-hint $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-section-hint
             {} $ |& $ {} (:margin-top |8px) (:font-size |13px) (:font-weight |620) (:color |#7890ae)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-section-number $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-section-number
             {} $ |& $ {} (:font-family "|ui-monospace, SFMono-Regular, Menlo, monospace") (:font-size |12px) (:font-weight |720) (:color |#86a0c3)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-section-preview $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-section-preview
             {} $ |& $ {} (:margin-top |20px) (:font-size |17px) (:line-height |1.92) (:letter-spacing |0.005em) (:color |#48576c) (:white-space |pre-wrap)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-section-tags $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-section-tags
             {} $ |& $ {} (:flex-shrink |0) (:max-width |48%) (:font-size |12px) (:font-weight |600) (:line-height |1.5) (:letter-spacing |0.01em) (:text-align |right) (:color |#8295ad)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-section-title $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-section-title
             {} $ |& $ {} (:margin-top |0px) (:font-size |25px) (:font-weight |750) (:letter-spacing |-0.02em) (:line-height |1.3)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-tag $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-tag
             {} $ |& $ {} (:padding "|4px 8px") (:border-radius |6px) (:background "|linear-gradient(135deg, #edf5ff, #f2efff)") (:border "|1px solid #d9e6f5") (:color |#53709a) (:font-size |12px) (:font-weight |620)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-reader-tag-row $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-reader-tag-row
             {} $ |& $ {} (:display |flex) (:flex-wrap |wrap) (:gap |7px) (:margin-top |18px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-board $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-board
             {} $ |& $ {} (:max-width |1180px) (:margin "|0 auto") (:padding "|18px 10px 54px")
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-branch $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-branch
             {} $ |& $ {} (:padding "|14px 15px 15px") (:border "|1px solid #d7e6f3") (:border-radius |10px) (:background "|rgba(255,255,255,.78)") (:box-shadow "|0 6px 20px rgba(79,120,163,.05)")
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-branch-head $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-branch-head
             {} $ |& $ {} (:display |flex) (:align-items |center) (:gap |8px) (:margin-bottom |7px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-branch-index $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-branch-index
             {} $ |& $ {} (:display |inline-flex) (:align-items |center) (:justify-content |center) (:width |20px) (:height |20px) (:border-radius |5px) (:background |#e8f3fd) (:font-size |10px) (:font-weight |800) (:color |#5c8bb8)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-branch-note $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-branch-note
             {} $ |& $ {} (:margin "|0 0 11px") (:font-size |13px) (:line-height |1.62) (:color |#5d748c)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-branch-title $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-branch-title
             {} $ |& $ {} (:font-size |16px) (:font-weight |760) (:color |#315779)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-branches $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-branches
             {} $ |& $ {} (:display |flex) (:flex-direction |column) (:gap |12px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-event $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-event
             {}
@@ -1901,118 +1822,116 @@
                 :transition "|transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease"
               |&:hover $ {} (:transform "|translateY(-2px)") (:border-color |#9dc8ee) (:box-shadow "|0 10px 22px rgba(74, 125, 181, .11)")
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-event-body $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-event-body
             {} $ |& $ {} (:min-width |0)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-event-list $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-event-list
             {} $ |& $ {} (:display |grid) (:grid-template-columns "|repeat(2, minmax(0, 1fr))") (:gap |10px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-event-meta $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-event-meta
             {} $ |& $ {} (:overflow |hidden) (:margin-bottom |3px) (:font-size |11px) (:font-weight |650) (:color |#7391ae) (:text-overflow |ellipsis) (:white-space |nowrap)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-event-order $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-event-order
             {} $ |& $ {} (:padding-top |2px) (:font-size |11px) (:font-weight |800) (:letter-spacing |0.3px) (:color |#82a6c8)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-event-summary $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-event-summary
             {} $ |& $ {} (:display |-webkit-box) (:overflow |hidden) (:font-size |12px) (:line-height |1.52) (:color |#637991) (:-webkit-line-clamp |2) (:-webkit-box-orient |vertical)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-event-title $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-event-title
             {} $ |& $ {} (:margin-bottom |5px) (:font-size |16px) (:font-weight |740) (:color |#2d5277)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-handoff $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-handoff
             {} $ |& $ {} (:margin-top |12px) (:padding "|11px 14px") (:border-radius |8px) (:background |#f1f8ff) (:font-size |13px) (:line-height |1.55) (:color |#51708d)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-handoff-label $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-handoff-label
             {} $ |& $ {} (:margin-right |10px) (:font-size |11px) (:font-weight |800) (:letter-spacing |0.35px) (:color |#3e78a9)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-narrative $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-narrative
             {} $ |& $ {} (:display |grid) (:grid-template-columns "|96px minmax(0,1fr)") (:column-gap |12px) (:row-gap |7px) (:margin-bottom |16px) (:padding "|13px 15px") (:border-left "|3px solid #b8d8f3") (:border-radius |0px) (:background "|rgba(249,252,255,.72)")
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-narrative-label $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-narrative-label
             {} $ |& $ {} (:padding-top |1px) (:font-size |11px) (:font-weight |800) (:letter-spacing |0.5px) (:color |#5d85ad)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-narrative-text $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-narrative-text
             {} $ |& $ {} (:font-size |13px) (:line-height |1.65) (:color |#48627d)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-stage $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-stage
             {} $ |& $ {} (:position |relative) (:display |grid) (:grid-template-columns "|112px 52px minmax(0, 1fr)") (:column-gap |14px) (:padding-bottom |32px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-stage-content $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-stage-content
             {} $ |& $ {} (:min-width |0) (:padding-bottom |4px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-stage-count $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-stage-count
             {} $ |& $ {} (:flex "|0 0 auto") (:font-size |12px) (:font-weight |650) (:color |#7290ad)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-stage-era $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-stage-era
             {} $ |& $ {} (:padding-top |12px) (:font-size |13px) (:font-weight |740) (:letter-spacing |0.4px) (:color |#5880a8) (:text-align |right)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-stage-head $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-stage-head
             {} $ |& $ {} (:display |flex) (:align-items |baseline) (:justify-content |space-between) (:gap |16px) (:margin "|5px 0 12px")
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-stage-marker $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-stage-marker
             {} $ |& $ {} (:position |relative) (:z-index |1) (:display |flex) (:align-items |center) (:justify-content |center) (:width |36px) (:height |36px) (:margin-top |2px) (:box-sizing |border-box) (:border "|2px solid #94c4ec") (:border-radius |50%) (:background |#f8fcff) (:font-size |11px) (:font-weight |800) (:color |#3474ac) (:box-shadow "|0 0 0 5px rgba(247, 251, 255, .8)")
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-stage-title $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-stage-title
             {} $ |& $ {} (:font-size |22px) (:font-weight |750) (:letter-spacing |-0.3px) (:color |#294c70)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-stages $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-stages
             {} $ |& $ {} (:display |grid) (:grid-template-columns "|repeat(5, minmax(245px, 1fr))") (:gap |14px) (:min-width |1320px)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-timeline-vertical $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-timeline-vertical
             {}
               |& $ {} (:position |relative) (:display |flex) (:flex-direction |column) (:gap |0)
               |&:before $ {} (:position |absolute) (:top |28px) (:bottom |36px) (:left |138px) (:width |2px) (:background |#c7ddf3) (:content "|\"")
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'validate-knowledge-docs! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn validate-knowledge-docs! (documents)
             let
                 ids $ map documents $ fn (doc) (:id doc)
                 docs $ foldl documents ({})
                   fn (acc doc)
-                    hint-fn $ {}
-                      :args $ [] (:: 'Map 'String 'app.schema/KnowledgeDoc) 'app.schema/KnowledgeDoc
-                      :return $ :: 'Map 'String 'app.schema/KnowledgeDoc
+                    hint-fn $ Fn (Map String app.schema/KnowledgeDoc) app.schema/KnowledgeDoc $ -> (Map String app.schema/KnowledgeDoc)
                     assoc acc (:id doc) doc
                 duplicates $ distinct $ filter ids
                   fn (id)
@@ -2121,14 +2040,13 @@
                 :errors $ concat duplicate-errors $ concat broken-reference-errors (concat queue-errors relation-errors)
                 :warnings warnings
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] $ :: 'List 'app.schema/KnowledgeDoc
-            :return $ :: 'Map 'Tag $ :: 'List (:: 'Map 'Tag 'Dynamic)
+          :schema $ quote $ Fn (List app.schema/KnowledgeDoc)
+            -> $ Map Tag $ List (Map Tag Dynamic)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.container
           :require
             respo.css :refer $ defstyle
-            respo.core :refer $ defcomp defeffect <> >> div button span list->
+            respo.core :refer $ defcomp defeffect <> >> div button span list-> show
             reel.comp.reel :refer $ comp-typed-reel
             app.config :refer $ dev?
             respo-md.comp.md :refer $ comp-md-block
@@ -2144,12 +2062,12 @@
               get-env |mode
               , .unwrap-or |release
           :examples $ []
-          :schema $ :: 'Bool
+          :schema $ quote Bool
         'site $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def site
             {} $ :storage-key |workflow
           :examples $ []
-          :schema $ :: 'Map 'Tag 'String
+          :schema $ quote $ Map Tag String
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.config
     'app.main $ %{} 'FileEntry
@@ -2158,11 +2076,12 @@
           :code $ quote $ defref *reel
             typed/State :base schema/store :store schema/store :records ([]) :pointer (Option :none) :stopped? false :display? false :merged? false
           :examples $ []
-          :schema $ :: 'Ref $ :: 'reel.typed/State 'app.schema/Op (:: 'Map 'Tag 'Dynamic)
+          :schema $ quote $ Ref
+            reel.typed/State app.schema/Op $ Map Tag Dynamic
         '*storage-ready? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *storage-ready? false
           :examples $ []
-          :schema $ :: 'Ref 'Bool
+          :schema $ quote $ Ref Bool
         'dispatch! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch! (raw-op)
             if (enum? raw-op)
@@ -2177,9 +2096,7 @@
               raise |Dispatch-expected-an-Enum
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'Dynamic
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn Enum (-> Unit) (:features :js-ffi)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println |Running-mode: $ if config/dev? |dev |release
@@ -2208,15 +2125,12 @@
             println |App-started.
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'mount-target $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn mount-target ()
             option:unwrap $ dom/query-selector |.app
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.dom/DomElement)
-            :args $ []
+          :schema $ quote $ Fn (-> respo.dom/DomElement)
         'persist-storage! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-storage! ()
             when @*storage-ready? $ browser/storage-set!
@@ -2224,9 +2138,7 @@
               format-cirru-edn $ :store @*reel
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! ()
             if (js-nullish? build-errors)
@@ -2237,18 +2149,14 @@
               hud! |error build-errors
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! ()
             render-with! (mount-target)
               fn () $ comp-container @*reel
               , dispatch!
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.main
           :require
@@ -2268,72 +2176,74 @@
       :defs $ {}
         'HistoryBranch $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct HistoryBranch (:title 'String) (:note 'String)
-            :ids $ :: 'List 'String
+            :ids $ quote $ List String
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'HistoryStage $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct HistoryStage (:id 'String) (:era 'String) (:title 'String) (:question 'String) (:breakthrough 'String) (:handoff 'String)
-            :ids $ :: 'List 'String
-            :branches $ :: 'List 'app.schema/HistoryBranch
+            :ids $ quote $ List String
+            :branches $ quote $ List app.schema/HistoryBranch
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'KnowledgeBundle $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct KnowledgeBundle
-            :docs $ :: 'Map 'String 'app.schema/KnowledgeDoc
-            :diagnostics $ :: 'Map 'Tag $ :: 'List (:: 'Map 'Tag 'Dynamic)
+            :docs $ quote $ Map String app.schema/KnowledgeDoc
+            :diagnostics $ quote $ Map Tag
+              List $ Map Tag Dynamic
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'KnowledgeDoc $ %{} 'CodeEntry
           :doc "|Markdown 文档元数据。id/content/source/label 为加载器提供的必需字段；其余使用 Option 保留缺失与显式空值的区别，不把缺失 tags 偷换成空集合。"
           :code $ quote $ defstruct KnowledgeDoc (:id 'String) (:content 'String) (:source 'String) (:label 'String)
-            :title $ :: 'Option 'String
-            :summary $ :: 'Option 'String
-            :kind $ :: 'Option 'Tag
-            :era $ :: 'Option 'String
-            :formula $ :: 'Option 'String
-            :tags $ :: 'Option $ :: 'Set 'String
-            :links $ :: 'Option $ :: 'List 'String
-            :parent $ :: 'Option 'String
-            :queue $ :: 'Option $ :: 'List 'String
-            :relations $ :: 'Option $ :: 'List 'app.schema/KnowledgeRelation
+            :title $ quote $ Option String
+            :summary $ quote $ Option String
+            :kind $ quote $ Option Tag
+            :era $ quote $ Option String
+            :formula $ quote $ Option String
+            :tags $ quote $ Option (Set String)
+            :links $ quote $ Option (List String)
+            :parent $ quote $ Option String
+            :queue $ quote $ Option (List String)
+            :relations $ quote $ Option (List app.schema/KnowledgeRelation)
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'KnowledgeEdge $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct KnowledgeEdge (:source 'String) (:target 'String) (:relation 'String) (:kind 'Tag)
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'KnowledgeRecommendation $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct KnowledgeRecommendation (:id 'String) (:label 'String) (:summary 'String) (:kind 'String) (:relation 'String) (:direction 'String)
-            :tags $ :: 'Set 'String
+            :tags $ quote $ Set String
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'KnowledgeRelation $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct KnowledgeRelation
-            :direction $ :: 'Option 'Tag
-            :source $ :: 'Option 'String
-            :target $ :: 'Option 'String
-            :kind $ :: 'Option 'Tag
-            :label $ :: 'Option 'String
+            :direction $ quote $ Option Tag
+            :source $ quote $ Option String
+            :target $ quote $ Option String
+            :kind $ quote $ Option Tag
+            :label $ quote $ Option String
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op
-            :states (:: 'List 'Dynamic) 'Dynamic
-            :hydrate-storage $ :: 'Map 'Tag 'Dynamic
+            :states
+              quote $ List Dynamic
+              , 'Dynamic
+            :hydrate-storage $ quote $ Map Tag Dynamic
           :examples $ []
-          :schema $ :: 'EnumDef
+          :schema $ quote EnumDef
         'ReaderState $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ReaderState (:selected 'String) (:active-section 'String)
-            :history $ :: 'List 'String
+            :history $ quote $ List String
             :view 'Tag
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'decode-knowledge-doc $ %{} 'CodeEntry
           :doc "|在 Markdown 加载/验证边界一次解码字段及嵌套关系，保留具体错误路径；不使用 Map 到 Struct 的断言。"
           :code $ quote $ defn decode-knowledge-doc (raw) (decode-map-as raw 'app.schema/KnowledgeDoc)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/KnowledgeDoc)
-            :args $ [] 'Dynamic
+          :schema $ quote $ Fn Dynamic (-> app.schema/KnowledgeDoc)
           :tests $ [] $ %{} 'TestEntry (:name |preserve-absent-versus-empty-tags)
             :code $ quote $ let
                 missing $ decode-knowledge-doc $ {} (:id |probe) (:content |body) (:source |synthetic) (:label |Probe)
@@ -2356,8 +2266,7 @@
                   , fields
                 , 'app.schema/ReaderState
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/ReaderState)
-            :args $ [] 'Dynamic
+          :schema $ quote $ Fn Dynamic (-> app.schema/ReaderState)
           :tests $ [] $ %{} 'TestEntry (:name |legacy-map-and-archived-struct)
             :code $ quote $ let
                 restored $ decode-reader-state $ {} (:selected |quaternions) (:active-section |history)
@@ -2371,9 +2280,7 @@
                         :data $ {} $ :selected 42
                     , |unexpected-success
                   fn (message)
-                    hint-fn $ {}
-                      :args $ [] 'String
-                      :return 'String
+                    hint-fn $ Fn String $ -> String
                     , message
               assert= :reader $ :view restored
               assert= :map $ :view again
@@ -2405,15 +2312,14 @@
                   (:none) cursor-states
               assoc store :states checked-states
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
-            :return $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn Dynamic
+            -> $ Map Tag Dynamic
         'store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def store
             {} $ :states $ {}
               :cursor $ []
           :examples $ []
-          :schema $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Map Tag Dynamic
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.schema
     'app.updater $ %{} 'FileEntry
@@ -2430,9 +2336,8 @@
               (:hydrate-storage data) data
               _ $ do (eprintln |Unknown-op: op) store
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'Map 'Tag 'Dynamic) 'app.schema/Op 'String 'Number
-            :return $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn (Map Tag Dynamic) app.schema/Op String Number
+            -> $ Map Tag Dynamic
           :tests $ [] $ %{} 'TestEntry (:name |state-path-and-open-store)
             :code $ quote $ let
                 initial $ assoc app.schema/store :content |kept

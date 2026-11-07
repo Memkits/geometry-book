@@ -64,7 +64,6 @@ jobs:
           --ns app.schema --ns app.updater \
           --summary-only --format json
         calcit calcit.cirru test --require-match
-        calcit calcit.cirru analyze quality --format json > /tmp/geometry-book-quality.json
         calcit calcit.cirru analyze quality --baseline config/calcit-quality.cirru
         test "$strict_exit" -eq 0
         jq -e '.data.workflow.status == "passed" and .diagnostics == []' /tmp/geometry-book-strict.json

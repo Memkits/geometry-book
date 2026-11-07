@@ -76,7 +76,6 @@ jobs:
         path: |
           yarn.lock
           /tmp/geometry-book-strict.json
-          /tmp/geometry-book-quality.json
           dist
         if-no-files-found: error
         retention-days: 3

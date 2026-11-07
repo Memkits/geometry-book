@@ -6,7 +6,7 @@
     {} (:description |) (:init-fn 'app.main/main!) (:mode :js) (:reload-fn 'app.main/reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |memof/ |respo-ui.calcit/ |reel.calcit/ |respo-markdown.calcit/
-      :type-slots $ {} $ :dispatch-op |app.schema/Op
+      :type-slots $ {} $ :dispatch-op 'app.schema/Op
   :files $ {}
     'app.comp.container $ %{} 'FileEntry
       :defs $ {}
@@ -74,10 +74,12 @@
                 branch $ >> states :knowledge-graph
                 cursor $ decode-map-as
                   option:unwrap-or (get branch :cursor) ([])
-                  :: 'List 'Dynamic
+                  List Dynamic
                 reader-state $ app.schema/decode-reader-state $ option:unwrap-or (get branch :data) ({})
               div ({}) (comp-knowledge-graph cursor reader-state)
-                when dev? $ comp-typed-reel (>> states :reel) reel $ {}
+                if dev?
+                  Option :some $ comp-typed-reel (>> states :reel) reel $ {}
+                  Option :none
           :examples $ []
           :schema $ quote $ Fn
             reel.typed/State app.schema/Op $ Map Tag Dynamic
@@ -2084,19 +2086,17 @@
           :schema $ quote $ Ref Bool
         'dispatch! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch! (raw-op)
-            if (enum? raw-op)
-              let
-                  next $ match (typed/decode-control raw-op)
-                    (:some control) (typed/apply-control updater @*reel control)
-                    (:none)
-                      typed/record-op updater @*reel (decode-map-as raw-op 'app.schema/Op)
-                        decode-map-as (shortid/generate) 'String
-                        decode-map-as (js/Date.now) 'Number
-                reset! *reel next
-              raise |Dispatch-expected-an-Enum
+            let
+                next $ match (typed/decode-control raw-op)
+                  (:some control) (typed/apply-control updater @*reel control)
+                  (:none)
+                    typed/record-op updater @*reel (decode-map-as raw-op 'app.schema/Op)
+                      decode-map-as (shortid/generate) 'String
+                      decode-map-as (js/Date.now) 'Number
+              reset! *reel next
             , &unit
           :examples $ []
-          :schema $ quote $ Fn Enum (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn AnyEnum (-> Unit) (:features :js-ffi)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println |Running-mode: $ if config/dev? |dev |release
@@ -2175,68 +2175,65 @@
     'app.schema $ %{} 'FileEntry
       :defs $ {}
         'HistoryBranch $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct HistoryBranch (:title 'String) (:note 'String)
-            :ids $ quote $ List String
+          :code $ quote $ defstruct HistoryBranch (:title String) (:note String)
+            :ids $ List String
           :examples $ []
           :schema $ quote StructDef
         'HistoryStage $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct HistoryStage (:id 'String) (:era 'String) (:title 'String) (:question 'String) (:breakthrough 'String) (:handoff 'String)
-            :ids $ quote $ List String
-            :branches $ quote $ List app.schema/HistoryBranch
+          :code $ quote $ defstruct HistoryStage (:id String) (:era String) (:title String) (:question String) (:breakthrough String) (:handoff String)
+            :ids $ List String
+            :branches $ List app.schema/HistoryBranch
           :examples $ []
           :schema $ quote StructDef
         'KnowledgeBundle $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct KnowledgeBundle
-            :docs $ quote $ Map String app.schema/KnowledgeDoc
-            :diagnostics $ quote $ Map Tag
-              List $ Map Tag Dynamic
+            :docs $ Map String app.schema/KnowledgeDoc
+            :diagnostics $ Map Tag $ List (Map Tag Dynamic)
           :examples $ []
           :schema $ quote StructDef
         'KnowledgeDoc $ %{} 'CodeEntry
           :doc "|Markdown 文档元数据。id/content/source/label 为加载器提供的必需字段；其余使用 Option 保留缺失与显式空值的区别，不把缺失 tags 偷换成空集合。"
-          :code $ quote $ defstruct KnowledgeDoc (:id 'String) (:content 'String) (:source 'String) (:label 'String)
-            :title $ quote $ Option String
-            :summary $ quote $ Option String
-            :kind $ quote $ Option Tag
-            :era $ quote $ Option String
-            :formula $ quote $ Option String
-            :tags $ quote $ Option (Set String)
-            :links $ quote $ Option (List String)
-            :parent $ quote $ Option String
-            :queue $ quote $ Option (List String)
-            :relations $ quote $ Option (List app.schema/KnowledgeRelation)
+          :code $ quote $ defstruct KnowledgeDoc (:id String) (:content String) (:source String) (:label String)
+            :title $ Option String
+            :summary $ Option String
+            :kind $ Option Tag
+            :era $ Option String
+            :formula $ Option String
+            :tags $ Option $ Set String
+            :links $ Option $ List String
+            :parent $ Option String
+            :queue $ Option $ List String
+            :relations $ Option $ List app.schema/KnowledgeRelation
           :examples $ []
           :schema $ quote StructDef
         'KnowledgeEdge $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct KnowledgeEdge (:source 'String) (:target 'String) (:relation 'String) (:kind 'Tag)
+          :code $ quote $ defstruct KnowledgeEdge (:source String) (:target String) (:relation String) (:kind Tag)
           :examples $ []
           :schema $ quote StructDef
         'KnowledgeRecommendation $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct KnowledgeRecommendation (:id 'String) (:label 'String) (:summary 'String) (:kind 'String) (:relation 'String) (:direction 'String)
-            :tags $ quote $ Set String
+          :code $ quote $ defstruct KnowledgeRecommendation (:id String) (:label String) (:summary String) (:kind String) (:relation String) (:direction String)
+            :tags $ Set String
           :examples $ []
           :schema $ quote StructDef
         'KnowledgeRelation $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct KnowledgeRelation
-            :direction $ quote $ Option Tag
-            :source $ quote $ Option String
-            :target $ quote $ Option String
-            :kind $ quote $ Option Tag
-            :label $ quote $ Option String
+            :direction $ Option Tag
+            :source $ Option String
+            :target $ Option String
+            :kind $ Option Tag
+            :label $ Option String
           :examples $ []
           :schema $ quote StructDef
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op
-            :states
-              quote $ List Dynamic
-              , 'Dynamic
-            :hydrate-storage $ quote $ Map Tag Dynamic
+            :states (List Dynamic) Dynamic
+            :hydrate-storage $ Map Tag Dynamic
           :examples $ []
           :schema $ quote EnumDef
         'ReaderState $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct ReaderState (:selected 'String) (:active-section 'String)
-            :history $ quote $ List String
-            :view 'Tag
+          :code $ quote $ defstruct ReaderState (:selected String) (:active-section String)
+            :history $ List String
+            :view Tag
           :examples $ []
           :schema $ quote StructDef
         'decode-knowledge-doc $ %{} 'CodeEntry
@@ -2257,7 +2254,7 @@
             let
                 fields $ decode-map-as
                   if (struct? raw) (&struct:to-map raw) raw
-                  :: 'Map 'Tag 'Dynamic
+                  Map Tag Dynamic
               decode-map-as
                 merge
                   {} (:selected |complex-numbers) (:active-section |history)
@@ -2290,20 +2287,20 @@
         'decode-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-store (raw)
             let
-                store $ decode-map-as raw $ :: 'Map 'Tag 'Dynamic
+                store $ decode-map-as raw $ Map Tag Dynamic
                 states $ decode-map-as
                   option:unwrap-or (get store :states) ({})
-                  :: 'Map 'Dynamic 'Dynamic
+                  Map Dynamic Dynamic
                 cursor-states $ match (get states :cursor)
                   (:some raw-cursor)
                     if (nil? raw-cursor)
                       assoc states :cursor $ []
-                      assoc states :cursor $ decode-map-as raw-cursor $ :: 'List 'Dynamic
+                      assoc states :cursor $ decode-map-as raw-cursor $ List Dynamic
                   (:none) states
                 checked-states $ match (get cursor-states :knowledge-graph)
                   (:some raw-branch)
                     let
-                        branch $ decode-map-as raw-branch $ :: 'Map 'Dynamic 'Dynamic
+                        branch $ decode-map-as raw-branch $ Map Dynamic Dynamic
                         normalized $ match (get branch :data)
                           (:some data)
                             assoc branch :data $ decode-reader-state data
@@ -2332,7 +2329,7 @@
                   update-state-tree
                     option:unwrap-or (get store :states) ({})
                     , cursor s
-                  :: 'Map 'Dynamic 'Dynamic
+                  Map Dynamic Dynamic
               (:hydrate-storage data) data
               _ $ do (eprintln |Unknown-op: op) store
           :examples $ []

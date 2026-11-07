@@ -1,8 +1,9 @@
 
-{} (:calcit-version |0.27.0)
+{} (:calcit-version |0.36.0)
   :version |0.0.3
-  :dependencies $ {} (|Respo/reel.calcit |0.6.33-alpha.2)
-    |Respo/respo-markdown.calcit |0.4.46
-    |Respo/respo-ui.calcit |0.7.32-alpha.3
-    |Respo/respo.calcit |0.16.114-alpha.5
-    |calcit-lang/memof |0.0.36
+  :dependencies $ {} (|Respo/reel.calcit |0.9.2)
+    |Respo/respo-markdown.calcit |0.8.1
+    |Respo/respo-ui.calcit |0.15.1
+    |Respo/respo.calcit |0.19.4
+    |calcit-lang/js-ffi |0.2.13
+    |calcit-lang/memof |0.0.46

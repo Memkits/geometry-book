@@ -17,11 +17,15 @@ caps verify --toolchain
 yarn dev
 ```
 
-Use Calcit/procs 0.27.0, Caps 0.1.1 and Node.js 24. Canonical source/dependencies
+Use paired formal Calcit CLI/procs 0.36.0, Caps 0.1.1 and Node.js 24. Canonical source/dependencies
 are `calcit.cirru` and `deps.cirru`; compact/package snapshots are retired.
 Edit source through the Calcit CLI. `yarn dev` compiles initially and starts Vite;
 run `calcit calcit.cirru --watch` in another terminal for live Calcit edits.
 `yarn build` compiles the default JS browser entry and builds once.
+
+### 迁移状态
+
+已配对正式 CLI/procs 0.36.0、Caps 0.1.1 与 Node 24，七个已发布模块通过 `caps --strict`。条件子节点改为返回 Option，dispatch 参数写成 `AnyEnum`，并绑定 `app.schema/Op` 类型槽。原 51 篇 Markdown、加载器的逐记录校验和质量基线保持不变。
 
 To build:
 

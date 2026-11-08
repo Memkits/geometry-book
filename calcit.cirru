@@ -14,6 +14,10 @@
           :code $ quote $ defref *knowledge-network-instances ({})
           :examples $ []
           :schema $ quote $ Ref (Map Dynamic Dynamic)
+        'NetworkField $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defunion NetworkField String Tag
+          :examples $ []
+          :schema $ quote UnionDef
         'card-queue $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn card-queue (node blueprint)
             let
@@ -74,7 +78,7 @@
                 branch $ >> states :knowledge-graph
                 cursor $ decode-map-as
                   option:unwrap-or (get branch :cursor) ([])
-                  List Dynamic
+                  List respo.schema/CoordKey
                 reader-state $ app.schema/decode-reader-state $ option:unwrap-or (get branch :data) ({})
               div ({}) (comp-knowledge-graph cursor reader-state)
                 if dev?
@@ -94,7 +98,7 @@
                   <> "|关系网络 · 拖动空白处平移，滚轮缩放；颜色对应数域、四元数、几何代数与时空主线。"
           :examples $ []
           :schema $ quote $ Fn
-            List $ Map Tag Dynamic
+            List $ Map Tag $ Map Tag app.comp.container/NetworkField
             -> respo.schema/Component
         'comp-heatmap-view $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-heatmap-view (state cursor)
@@ -108,10 +112,10 @@
                 button
                   {} (:class-name style-overview-map-close)
                     :on-click $ fn (e d!)
-                      hint-fn $ Fn (Map Tag Dynamic)
-                        Fn Dynamic & Dynamic $ -> Unit
+                      hint-fn $ Fn respo.schema/RespoEvent
+                        Fn app.schema/Op $ -> Unit
                         -> Unit
-                      d! $ Op :states cursor $ struct-with state (:view :reader)
+                      d! $ Op :reader cursor $ struct-with state (:view :reader)
                       , &unit
                   <> "|返回阅读"
               div
@@ -172,11 +176,11 @@
                                         , .unwrap-or ||
                                       , "| · " $ :era stage
                                     :on-click $ fn (e d!)
-                                      hint-fn $ Fn (Map Tag Dynamic)
-                                        Fn Dynamic & Dynamic $ -> Unit
+                                      hint-fn $ Fn respo.schema/RespoEvent
+                                        Fn app.schema/Op $ -> Unit
                                         -> Unit
                                       when (target .some?)
-                                        d! $ Op :states cursor $ struct-with
+                                        d! $ Op :reader cursor $ struct-with
                                           struct-with
                                             struct-with state $ :view :reader
                                             :selected $ :id $ target .unwrap
@@ -189,7 +193,7 @@
                                     {} $ :class-name style-heatmap-caption
                                     <> $ if (= amount 0) "|暂无卡片" "|点击浏览"
           :examples $ []
-          :schema $ quote $ Fn app.schema/ReaderState (List Dynamic) (-> respo.schema/Component)
+          :schema $ quote $ Fn app.schema/ReaderState (List respo.schema/CoordKey) (-> respo.schema/Component)
         'comp-knowledge-graph $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-knowledge-graph (cursor state)
             let
@@ -216,9 +220,9 @@
                 timeline-active-id $ timeline-selected .unwrap-or $ timeline-parent .unwrap-or selected-id
                 navigate! $ fn (target-id d!)
                   hint-fn $ Fn String
-                    Fn Dynamic & Dynamic $ -> Unit
+                    Fn app.schema/Op $ -> Unit
                     -> Unit
-                  d! $ Op :states cursor $ app.schema/ReaderState :selected target-id :active-section |history :history
+                  d! $ Op :reader cursor $ app.schema/ReaderState :selected target-id :active-section |history :history
                     take-last
                       conj
                         filter visit-history $ fn (id) (not= id selected-id)
@@ -252,8 +256,8 @@
                               :class-name $ if current? (str-spaced style-history-node style-history-node-current)
                                 if visited? (str-spaced style-history-node style-history-node-visited) style-history-node
                               :on-click $ fn (e d!)
-                                hint-fn $ Fn (Map Tag Dynamic)
-                                  Fn Dynamic & Dynamic $ -> Unit
+                                hint-fn $ Fn respo.schema/RespoEvent
+                                  Fn app.schema/Op $ -> Unit
                                   -> Unit
                                 navigate! id d!
                                 , &unit
@@ -286,10 +290,10 @@
                           str-spaced style-history-view-toggle style-history-view-toggle-active
                           , style-history-view-toggle
                         :on-click $ fn (e d!)
-                          hint-fn $ Fn (Map Tag Dynamic)
-                            Fn Dynamic & Dynamic $ -> Unit
+                          hint-fn $ Fn respo.schema/RespoEvent
+                            Fn app.schema/Op $ -> Unit
                             -> Unit
-                          d! $ Op :states cursor $ struct-with state (:view :map)
+                          d! $ Op :reader cursor $ struct-with state (:view :map)
                           , &unit
                       <> |MAP
                     button
@@ -299,10 +303,10 @@
                           str-spaced style-history-view-toggle style-history-view-toggle-active
                           , style-history-view-toggle
                         :on-click $ fn (e d!)
-                          hint-fn $ Fn (Map Tag Dynamic)
-                            Fn Dynamic & Dynamic $ -> Unit
+                          hint-fn $ Fn respo.schema/RespoEvent
+                            Fn app.schema/Op $ -> Unit
                             -> Unit
-                          d! $ Op :states cursor $ struct-with state (:view :timeline)
+                          d! $ Op :reader cursor $ struct-with state (:view :timeline)
                           , &unit
                       <> |TIME
                     button
@@ -312,10 +316,10 @@
                           str-spaced style-history-view-toggle style-history-view-toggle-active
                           , style-history-view-toggle
                         :on-click $ fn (e d!)
-                          hint-fn $ Fn (Map Tag Dynamic)
-                            Fn Dynamic & Dynamic $ -> Unit
+                          hint-fn $ Fn respo.schema/RespoEvent
+                            Fn app.schema/Op $ -> Unit
                             -> Unit
-                          d! $ Op :states cursor $ struct-with state (:view :heatmap)
+                          d! $ Op :reader cursor $ struct-with state (:view :heatmap)
                           , &unit
                       <> |HEAT
                 div
@@ -349,10 +353,10 @@
                               str-spaced style-reader-outline-item style-reader-outline-active
                               , style-reader-outline-item
                             :on-click $ fn (e d!)
-                              hint-fn $ Fn (Map Tag Dynamic)
-                                Fn Dynamic & Dynamic $ -> Unit
+                              hint-fn $ Fn respo.schema/RespoEvent
+                                Fn app.schema/Op $ -> Unit
                                 -> Unit
-                              d! $ Op :states cursor $ struct-with state
+                              d! $ Op :reader cursor $ struct-with state
                                 :active-section $ :id section
                               , &unit
                           span
@@ -377,8 +381,8 @@
                             [] idx $ button $ {} (:class-name style-reader-nav-button)
                               :inner-text $ :label target
                               :on-click $ fn (e d!)
-                                hint-fn $ Fn (Map Tag Dynamic)
-                                  Fn Dynamic & Dynamic $ -> Unit
+                                hint-fn $ Fn respo.schema/RespoEvent
+                                  Fn app.schema/Op $ -> Unit
                                   -> Unit
                                 navigate! id d!
                                 , &unit
@@ -401,8 +405,8 @@
                               [] idx $ button $ {} (:class-name style-reader-history-button)
                                 :inner-text $ str "|←" | $ :label target
                                 :on-click $ fn (e d!)
-                                  hint-fn $ Fn (Map Tag Dynamic)
-                                    Fn Dynamic & Dynamic $ -> Unit
+                                  hint-fn $ Fn respo.schema/RespoEvent
+                                    Fn app.schema/Op $ -> Unit
                                     -> Unit
                                   navigate! id d!
                                   , &unit
@@ -417,8 +421,8 @@
                         [] idx $ button
                           {} (:class-name style-reader-relation-button)
                             :on-click $ fn (e d!)
-                              hint-fn $ Fn (Map Tag Dynamic)
-                                Fn Dynamic & Dynamic $ -> Unit
+                              hint-fn $ Fn respo.schema/RespoEvent
+                                Fn app.schema/Op $ -> Unit
                                 -> Unit
                               navigate! (:id item) d!
                               , &unit
@@ -493,10 +497,10 @@
                             str-spaced style-reader-section-card style-reader-section-active
                             , style-reader-section-card
                           :on-click $ fn (e d!)
-                            hint-fn $ Fn (Map Tag Dynamic)
-                              Fn Dynamic & Dynamic $ -> Unit
+                            hint-fn $ Fn respo.schema/RespoEvent
+                              Fn app.schema/Op $ -> Unit
                               -> Unit
-                            d! $ Op :states cursor $ struct-with state
+                            d! $ Op :reader cursor $ struct-with state
                               :active-section $ :id section
                             , &unit
                         div
@@ -554,8 +558,8 @@
                       [] idx $ button
                         {} (:class-name style-reader-related-card)
                           :on-click $ fn (e d!)
-                            hint-fn $ Fn (Map Tag Dynamic)
-                              Fn Dynamic & Dynamic $ -> Unit
+                            hint-fn $ Fn respo.schema/RespoEvent
+                              Fn app.schema/Op $ -> Unit
                               -> Unit
                             navigate! (:id item) d!
                             , &unit
@@ -592,10 +596,10 @@
                     button
                       {} (:class-name style-overview-map-close)
                         :on-click $ fn (e d!)
-                          hint-fn $ Fn (Map Tag Dynamic)
-                            Fn Dynamic & Dynamic $ -> Unit
+                          hint-fn $ Fn respo.schema/RespoEvent
+                            Fn app.schema/Op $ -> Unit
                             -> Unit
-                          d! $ Op :states cursor $ struct-with state (:view :reader)
+                          d! $ Op :reader cursor $ struct-with state (:view :reader)
                           , &unit
                       <> "|返回阅读"
                   div
@@ -618,7 +622,7 @@
                   = (:view state) :heatmap
                   comp-heatmap-view state cursor
           :examples $ []
-          :schema $ quote $ Fn (List Dynamic) app.schema/ReaderState (-> respo.schema/Component)
+          :schema $ quote $ Fn (List respo.schema/CoordKey) app.schema/ReaderState (-> respo.schema/Component)
         'comp-timeline-view $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-timeline-view (state cursor)
             div
@@ -631,10 +635,10 @@
                 button
                   {} (:class-name style-overview-map-close)
                     :on-click $ fn (e d!)
-                      hint-fn $ Fn (Map Tag Dynamic)
-                        Fn Dynamic & Dynamic $ -> Unit
+                      hint-fn $ Fn respo.schema/RespoEvent
+                        Fn app.schema/Op $ -> Unit
                         -> Unit
-                      d! $ Op :states cursor $ struct-with state (:view :reader)
+                      d! $ Op :reader cursor $ struct-with state (:view :reader)
                       , &unit
                   <> "|返回阅读"
               div
@@ -710,10 +714,10 @@
                                             [] id $ button
                                               {} (:class-name style-timeline-event)
                                                 :on-click $ fn (e d!)
-                                                  hint-fn $ Fn (Map Tag Dynamic)
-                                                    Fn Dynamic & Dynamic $ -> Unit
+                                                  hint-fn $ Fn respo.schema/RespoEvent
+                                                    Fn app.schema/Op $ -> Unit
                                                     -> Unit
-                                                  d! $ Op :states cursor $ struct-with
+                                                  d! $ Op :reader cursor $ struct-with
                                                     struct-with state $ :view :reader
                                                     :selected $ if
                                                       =
@@ -756,7 +760,7 @@
                               <> "|带向下一阶段"
                             <> $ :handoff stage
           :examples $ []
-          :schema $ quote $ Fn app.schema/ReaderState (List Dynamic) (-> respo.schema/Component)
+          :schema $ quote $ Fn app.schema/ReaderState (List respo.schema/CoordKey) (-> respo.schema/Component)
         'effect-knowledge-network $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defeffect effect-knowledge-network (graph-data) (action el at-place?)
             when (= action :mount) (fcose cytoscape)
@@ -814,7 +818,7 @@
             , &unit
           :examples $ []
           :schema $ quote $ Fn
-            List $ Map Tag Dynamic
+            List $ Map Tag $ Map Tag app.comp.container/NetworkField
             -> respo.schema/Effect
             :features :js-ffi
         'find-card-blueprint $ %{} 'CodeEntry (:doc |)
@@ -970,26 +974,30 @@
           :code $ quote $ defn knowledge-network-elements ()
             concat
               map knowledge-nodes $ fn (doc)
-                {} $ :data $ {}
-                  :id $ :id doc
-                  :label $ :label doc
-                  :era $
-                    :era doc
-                    , .unwrap-or ||
-                  :domain $ graph-domain-key doc
-                  :kind $ kind-label $
-                    :kind doc
-                    , .unwrap-or :concept
+                {} $ :data $ decode-map-as
+                  {}
+                    :id $ :id doc
+                    :label $ :label doc
+                    :era $
+                      :era doc
+                      , .unwrap-or ||
+                    :domain $ graph-domain-key doc
+                    :kind $ kind-label $
+                      :kind doc
+                      , .unwrap-or :concept
+                  Map Tag app.comp.container/NetworkField
               map knowledge-edges $ fn (edge)
-                {} $ :data $ {}
-                  :id $ str (:source edge) "|→" $ :target edge
-                  :source $ :source edge
-                  :target $ :target edge
-                  :label $ :relation edge
-                  :kind $ :kind edge
+                {} $ :data $ decode-map-as
+                  {}
+                    :id $ str (:source edge) "|→" $ :target edge
+                    :source $ :source edge
+                    :target $ :target edge
+                    :label $ :relation edge
+                    :kind $ :kind edge
+                  Map Tag app.comp.container/NetworkField
           :examples $ []
           :schema $ quote $ Fn
-            -> $ List $ Map Tag Dynamic
+            -> $ List $ Map Tag (Map Tag app.comp.container/NetworkField)
         'knowledge-nodes $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def knowledge-nodes
             filter
@@ -2086,17 +2094,27 @@
           :schema $ quote $ Ref Bool
         'dispatch! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch! (raw-op)
-            let
-                next $ match (typed/decode-control raw-op)
-                  (:some control) (typed/apply-control updater @*reel control)
-                  (:none)
-                    typed/record-op updater @*reel (decode-map-as raw-op 'app.schema/Op)
-                      decode-map-as (shortid/generate) 'String
-                      decode-map-as (js/Date.now) 'Number
-              reset! *reel next
+            if
+              = (enum-definition raw-op) (Option :some typed/Control)
+              dispatch-resolved! $ decode-map-as raw-op 'reel.typed/Control
+              match (typed/decode-control raw-op)
+                (:some control) (dispatch-resolved! control)
+                (:none)
+                  dispatch-resolved! $ decode-map-as raw-op 'app.schema/Op
             , &unit
           :examples $ []
           :schema $ quote $ Fn AnyEnum (-> Unit) (:features :js-ffi)
+        'dispatch-resolved! $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn dispatch-resolved! (op)
+            hint-fn $ Fn app.schema/ResolvedOp (-> Unit) (:features :js-ffi)
+            reset! *reel $ match op
+              (reel.typed/Control control) (typed/apply-control updater @*reel control)
+              (app.schema/Op action)
+                typed/record-op updater @*reel action
+                  decode-map-as (shortid/generate) 'String
+                  decode-map-as (js/Date.now) 'Number
+            , &unit
+          :examples $ []
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println |Running-mode: $ if config/dev? |dev |release
@@ -2226,7 +2244,8 @@
           :schema $ quote StructDef
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op
-            :states (List Dynamic) Dynamic
+            :states (List respo.schema/CoordKey) Dynamic
+            :reader (List respo.schema/CoordKey) app.schema/ReaderState
             :hydrate-storage $ Map Tag Dynamic
           :examples $ []
           :schema $ quote EnumDef
@@ -2236,6 +2255,10 @@
             :view Tag
           :examples $ []
           :schema $ quote StructDef
+        'ResolvedOp $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defunion ResolvedOp Op reel.typed/Control
+          :examples $ []
+          :schema $ quote UnionDef
         'decode-knowledge-doc $ %{} 'CodeEntry
           :doc "|在 Markdown 加载/验证边界一次解码字段及嵌套关系，保留具体错误路径；不使用 Map 到 Struct 的断言。"
           :code $ quote $ defn decode-knowledge-doc (raw) (decode-map-as raw 'app.schema/KnowledgeDoc)
@@ -2295,7 +2318,7 @@
                   (:some raw-cursor)
                     if (nil? raw-cursor)
                       assoc states :cursor $ []
-                      assoc states :cursor $ decode-map-as raw-cursor $ List Dynamic
+                      assoc states :cursor $ decode-map-as raw-cursor $ List respo.schema/CoordKey
                   (:none) states
                 checked-states $ match (get cursor-states :knowledge-graph)
                   (:some raw-branch)
@@ -2330,8 +2353,13 @@
                     option:unwrap-or (get store :states) ({})
                     , cursor s
                   Map Dynamic Dynamic
+              (:reader cursor s)
+                assoc store :states $ decode-map-as
+                  update-state-tree
+                    option:unwrap-or (get store :states) ({})
+                    , cursor s
+                  Map Dynamic Dynamic
               (:hydrate-storage data) data
-              _ $ do (eprintln |Unknown-op: op) store
           :examples $ []
           :schema $ quote $ Fn (Map Tag Dynamic) app.schema/Op String Number
             -> $ Map Tag Dynamic

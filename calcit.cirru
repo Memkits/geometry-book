@@ -902,10 +902,6 @@
             match kind (:concept "|核心概念") (:theorem "|定理与公式") (:person "|历史人物") (:operation "|代数运算") (:principle "|基本原理") (:structure "|数学结构") (:representation "|几何表示") (:application "|现实应用") (_ "|知识节点")
           :examples $ []
           :schema $ quote $ Fn Tag (-> String)
-        'knowledge-bundle $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ def knowledge-bundle (load-knowledge-docs)
-          :examples $ []
-          :schema $ quote app.schema/KnowledgeBundle
         'knowledge-dimensions $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn knowledge-dimensions (doc)
             []
@@ -944,7 +940,7 @@
           :schema $ quote $ Fn app.schema/KnowledgeDoc
             -> $ List String
         'knowledge-docs $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ def knowledge-docs (:docs knowledge-bundle)
+          :code $ quote $ def knowledge-docs (load-knowledge-docs)
           :examples $ []
           :schema $ quote $ Map String app.schema/KnowledgeDoc
         'knowledge-edges $ %{} 'CodeEntry (:doc |)
@@ -1036,39 +1032,28 @@
                 diagnostics $ validate-knowledge-docs! $ map pairs
                   fn (pair)
                     decode-knowledge-doc $ option:unwrap $ last pair
-                errors $
-                  get diagnostics :errors
-                  , .unwrap-or $ []
-                warnings $
-                  get diagnostics :warnings
-                  , .unwrap-or $ []
+                errors $ :errors diagnostics
+                warnings $ :warnings diagnostics
                 _warnings $ &doseq (warning warnings)
-                  eprintln |[knowledge-warning] $
-                    get warning :message
-                    , .unwrap-or ||
+                  eprintln |[knowledge-warning] $ :message warning
                 _errors $ when-not (empty? errors)
                   raise $ str "|Knowledge validation failed:\n" $ join-string
                     map errors $ fn (error)
-                      str "|- " $
-                        get error :message
-                        , .unwrap-or ||
+                      str "|- " $ :message error
                     , "|\n"
-                serialized $ format-cirru-edn $ {}
-                  :docs $ pairs-map pairs
-                  :diagnostics diagnostics
-              quasiquote $ decode-map-as (parse-cirru-edn ~serialized) 'app.schema/KnowledgeBundle
+                serialized $ format-cirru-edn $ pairs-map pairs
+              quasiquote $ decode-map-as (parse-cirru-edn ~serialized) (Map String app.schema/KnowledgeDoc)
           :examples $ []
           :schema $ quote $ Macro
-            -> $ Expr app.schema/KnowledgeBundle
+            -> $ Expr $ Map String app.schema/KnowledgeDoc
             :capabilities :fs-read :log
           :tests $ [] $ %{} 'TestEntry (:name |all-original-markdown-documents)
             :code $ quote $ let
-                bundle knowledge-bundle
-                docs $ :docs bundle
-                diagnostics $ :diagnostics bundle
+                docs knowledge-docs
+                diagnostics $ validate-knowledge-docs! $ .to-list (distinct-values docs)
                 node $ option:unwrap $ find-knowledge-node |complex-numbers
               assert= 51 $ count docs
-              assert= 0 $ count $ option:unwrap (get diagnostics :errors)
+              assert= 0 $ count $ :errors diagnostics
               assert= "|复数" $ :label node
               assert= ([] |complex-equations |complex-plane-section |complex-multiplication)
                 map (card-queue node node)
@@ -1949,8 +1934,7 @@
                       count $ filter ids $ fn (candidate) (= id candidate)
                       , 1
                 duplicate-errors $ map duplicates $ fn (id)
-                  {} (:level :error) (:code :duplicate-id) (:source id)
-                    :message $ str "|Duplicate knowledge id: " id
+                  app.schema/KnowledgeDiagnostic :level :error :code :duplicate-id :source id :detail (Option :none) :message $ str "|Duplicate knowledge id: " id
                 broken-reference-errors $ mapcat documents $ fn (doc)
                   let
                       doc-id $ :id doc
@@ -1958,8 +1942,7 @@
                         fn (target-id)
                           not $ contains? docs target-id
                     map missing $ fn (target-id)
-                      {} (:level :error) (:code :broken-reference) (:source doc-id) (:target target-id)
-                        :message $ str "|Broken knowledge reference: " doc-id "|→" target-id
+                      app.schema/KnowledgeDiagnostic :level :error :code :broken-reference :source doc-id :detail (Option :some target-id) :message $ str "|Broken knowledge reference: " doc-id "|→" target-id
                 queue-errors $ mapcat documents $ fn (doc)
                   let
                       doc-id $ :id doc
@@ -1979,8 +1962,7 @@
                                   :parent target-doc
                                   , .unwrap-or ||
                     map invalid $ fn (target-id)
-                      {} (:level :error) (:code :invalid-queue-entry) (:source doc-id) (:target target-id)
-                        :message $ str "|Invalid knowledge queue: " doc-id "|→" target-id
+                      app.schema/KnowledgeDiagnostic :level :error :code :invalid-queue-entry :source doc-id :detail (Option :some target-id) :message $ str "|Invalid knowledge queue: " doc-id "|→" target-id
                 relation-errors $ mapcat documents $ fn (doc)
                   let
                       doc-id $ :id doc
@@ -2007,8 +1989,7 @@
                                 , .unwrap-or :unknown
                               (:source relation) .none?
                     map invalid $ fn (relation)
-                      {} (:level :error) (:code :invalid-relation) (:source doc-id) (:relation relation)
-                        :message $ str "|Invalid knowledge relation: " doc-id "|→" $ format-cirru-edn relation
+                      app.schema/KnowledgeDiagnostic :level :error :code :invalid-relation :source doc-id :detail (Option :some relation) :message $ str "|Invalid knowledge relation: " doc-id "|→" $ format-cirru-edn relation
                 warnings $ mapcat documents $ fn (doc)
                   let
                       doc-id $ :id doc
@@ -2034,24 +2015,34 @@
                           , .unwrap-or $ []
                     concat
                       if missing-summary?
-                        [] $ {} (:level :warning) (:code :missing-summary) (:source doc-id)
-                          :message $ str "|Missing summary: " doc-id
+                        [] $ app.schema/KnowledgeDiagnostic :level :warning :code :missing-summary :source doc-id :detail (Option :none) :message $ str "|Missing summary: " doc-id
                         []
                       concat
                         if missing-tags?
-                          [] $ {} (:level :warning) (:code :missing-tags) (:source doc-id)
-                            :message $ str "|Missing tags: " doc-id
+                          [] $ app.schema/KnowledgeDiagnostic :level :warning :code :missing-tags :source doc-id :detail (Option :none) :message $ str "|Missing tags: " doc-id
                           []
                         if isolated?
-                          [] $ {} (:level :warning) (:code :isolated-node) (:source doc-id)
-                            :message $ str "|Isolated knowledge node: " doc-id
+                          [] $ app.schema/KnowledgeDiagnostic :level :warning :code :isolated-node :source doc-id :detail (Option :none) :message $ str "|Isolated knowledge node: " doc-id
                           []
-              {}
-                :errors $ concat duplicate-errors $ concat broken-reference-errors (concat queue-errors relation-errors)
-                :warnings warnings
+              app.schema/KnowledgeDiagnostics :warnings warnings :errors $ concat duplicate-errors $ concat broken-reference-errors (concat queue-errors relation-errors)
           :examples $ []
-          :schema $ quote $ Fn (List app.schema/KnowledgeDoc)
-            -> $ Map Tag $ List (Map Tag Dynamic)
+          :schema $ quote $ Fn (List app.schema/KnowledgeDoc) (-> app.schema/KnowledgeDiagnostics)
+          :tests $ [] $ %{} 'TestEntry (:name |typed-diagnostic-details)
+            :code $ quote $ let
+                doc $ app.schema/decode-knowledge-doc $ {} (:id |probe) (:content |body) (:source |synthetic) (:label |Probe)
+                  :links $ [] |missing
+                  :relations $ [] $ {} (:direction :sideways) (:source |probe)
+                diagnostics $ validate-knowledge-docs! $ [] doc
+                errors $ :errors diagnostics
+                reference $ .unwrap $ first errors
+                relation $ .unwrap $ last errors
+              assert= 2 $ count errors
+              assert= :broken-reference $ :code reference
+              assert= (Option :some |missing) (:detail reference)
+              assert= :invalid-relation $ :code relation
+              assert=
+                first $ .unwrap $ :relations doc
+                :detail relation
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.container
           :require
@@ -2203,10 +2194,19 @@
             :branches $ List app.schema/HistoryBranch
           :examples $ []
           :schema $ quote StructDef
-        'KnowledgeBundle $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct KnowledgeBundle
-            :docs $ Map String app.schema/KnowledgeDoc
-            :diagnostics $ Map Tag $ List (Map Tag Dynamic)
+        'KnowledgeDiagnostic $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defstruct KnowledgeDiagnostic (:level Tag) (:code Tag) (:source String) (:message String)
+            :detail $ Option app.schema/KnowledgeDiagnosticDetail
+          :examples $ []
+          :schema $ quote StructDef
+        'KnowledgeDiagnosticDetail $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defunion KnowledgeDiagnosticDetail String app.schema/KnowledgeRelation
+          :examples $ []
+          :schema $ quote UnionDef
+        'KnowledgeDiagnostics $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defstruct KnowledgeDiagnostics
+            :errors $ List app.schema/KnowledgeDiagnostic
+            :warnings $ List app.schema/KnowledgeDiagnostic
           :examples $ []
           :schema $ quote StructDef
         'KnowledgeDoc $ %{} 'CodeEntry

@@ -14,10 +14,18 @@
           :code $ quote $ defref *knowledge-network-instances ({})
           :examples $ []
           :schema $ quote $ Ref (Map Dynamic Dynamic)
+        'NetworkElement $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defunion NetworkElement app.comp.container/NetworkNode app.schema/KnowledgeEdge
+          :examples $ []
+          :schema $ quote UnionDef
         'NetworkField $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defunion NetworkField String Tag
           :examples $ []
           :schema $ quote UnionDef
+        'NetworkNode $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defstruct NetworkNode (:id String) (:label String) (:era String) (:domain String) (:kind String)
+          :examples $ []
+          :schema $ quote StructDef
         'card-queue $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn card-queue (node blueprint)
             let
@@ -90,16 +98,15 @@
             -> respo.schema/Component
         'comp-global-map-network $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-global-map-network (graph-data)
-            [] (effect-knowledge-network graph-data)
+            []
+              effect-knowledge-network $ map graph-data encode-network-element
               div
                 {} $ :class-name style-overview-network
                 div
                   {} $ :class-name style-overview-network-note
                   <> "|关系网络 · 拖动空白处平移，滚轮缩放；颜色对应数域、四元数、几何代数与时空主线。"
           :examples $ []
-          :schema $ quote $ Fn
-            List $ Map Tag $ Map Tag app.comp.container/NetworkField
-            -> respo.schema/Component
+          :schema $ quote $ Fn (List app.comp.container/NetworkElement) (-> respo.schema/Component)
         'comp-heatmap-view $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-heatmap-view (state cursor)
             div
@@ -821,6 +828,26 @@
             List $ Map Tag $ Map Tag app.comp.container/NetworkField
             -> respo.schema/Effect
             :features :js-ffi
+        'encode-network-element $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn encode-network-element (element)
+            match element
+              (NetworkNode node)
+                {} $ :data $ {}
+                  :id $ :id node
+                  :label $ :label node
+                  :era $ :era node
+                  :domain $ :domain node
+                  :kind $ :kind node
+              (app.schema/KnowledgeEdge edge)
+                {} $ :data $ {}
+                  :id $ str (:source edge) "|→" $ :target edge
+                  :source $ :source edge
+                  :target $ :target edge
+                  :label $ :relation edge
+                  :kind $ :kind edge
+          :examples $ []
+          :schema $ quote $ Fn app.comp.container/NetworkElement
+            -> $ Map Tag $ Map Tag app.comp.container/NetworkField
         'find-card-blueprint $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn find-card-blueprint (id) (get knowledge-docs id)
           :examples $ []
@@ -970,30 +997,14 @@
           :code $ quote $ defn knowledge-network-elements ()
             concat
               map knowledge-nodes $ fn (doc)
-                {} $ :data $ decode-map-as
-                  {}
-                    :id $ :id doc
-                    :label $ :label doc
-                    :era $
-                      :era doc
-                      , .unwrap-or ||
-                    :domain $ graph-domain-key doc
-                    :kind $ kind-label $
-                      :kind doc
-                      , .unwrap-or :concept
-                  Map Tag app.comp.container/NetworkField
-              map knowledge-edges $ fn (edge)
-                {} $ :data $ decode-map-as
-                  {}
-                    :id $ str (:source edge) "|→" $ :target edge
-                    :source $ :source edge
-                    :target $ :target edge
-                    :label $ :relation edge
-                    :kind $ :kind edge
-                  Map Tag app.comp.container/NetworkField
+                hint-fn $ Fn app.schema/KnowledgeDoc $ -> app.comp.container/NetworkElement
+                NetworkNode :id (:id doc) :label (:label doc) :era
+                  .unwrap-or (:era doc) |
+                  , :domain (graph-domain-key doc) :kind $ kind-label $ .unwrap-or (:kind doc) :concept
+              , knowledge-edges
           :examples $ []
           :schema $ quote $ Fn
-            -> $ List $ Map Tag (Map Tag app.comp.container/NetworkField)
+            -> $ List app.comp.container/NetworkElement
         'knowledge-nodes $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def knowledge-nodes
             filter
@@ -2094,7 +2105,7 @@
                   dispatch-resolved! $ decode-map-as raw-op 'app.schema/Op
             , &unit
           :examples $ []
-          :schema $ quote $ Fn AnyEnum (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn AnyEnum (-> Unit) (:features :js-ffi) (:open :decode)
         'dispatch-resolved! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch-resolved! (op)
             hint-fn $ Fn app.schema/ResolvedOp (-> Unit) (:features :js-ffi)

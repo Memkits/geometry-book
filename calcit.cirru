@@ -29,10 +29,12 @@
         'card-queue $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn card-queue (node blueprint)
             let
-                queue $ option:unwrap-or (:queue blueprint) ([])
+                queue $
+                  :queue blueprint
+                  , .unwrap-or $ []
               if (empty? queue) (markdown-chapter-cards blueprint)
                 map queue $ fn (id)
-                  option:unwrap $ get knowledge-docs id
+                  (get knowledge-docs id) .unwrap
           :examples $ []
           :schema $ quote $ Fn app.schema/KnowledgeDoc app.schema/KnowledgeDoc
             -> $ List app.schema/KnowledgeDoc
@@ -41,16 +43,21 @@
             let
                 related-items $ related-knowledge-nodes selected-id
                 explicit $ concat
-                  option:unwrap-or (:links active-card) ([])
-                  option:unwrap-or (:links blueprint) ([])
+                    :links active-card
+                    , .unwrap-or $ []
+                  (:links blueprint) .unwrap-or $ []
                 ids $ distinct $ concat explicit
                   map related-items $ fn (item)
-                    option:unwrap $ get item :id
+                    (get item :id) .unwrap
               map (take ids 10)
                 fn (id)
                   let
-                      node $ option:unwrap $ find-knowledge-node id
-                      card $ option:unwrap $ find-card-blueprint id
+                      node $
+                        find-knowledge-node id
+                        , .unwrap
+                      card $
+                        find-card-blueprint id
+                        , .unwrap
                       relation-info $ find related-items $ fn (item)
                         = id $
                           get item :id
@@ -62,10 +69,10 @@
                           :kind node
                           , .unwrap-or :concept
                         , :relation
-                          (get (option:unwrap-or relation-info ({})) :relation)
+                          (get (relation-info .unwrap-or ({})) :relation)
                             , .unwrap-or "|相关线索"
                           , :direction
-                            (get (option:unwrap-or relation-info ({})) :direction)
+                            (get (relation-info .unwrap-or ({})) :direction)
                               , .unwrap-or "|↗"
                             , :tags $
                               :tags card
@@ -77,7 +84,7 @@
           :schema $ quote $ Fn String app.schema/KnowledgeDoc app.schema/KnowledgeDoc
             -> $ List app.schema/KnowledgeRecommendation
         'comp-container $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defcomp comp-container (reel)
+          :code $ quote $ defcomp comp-container (reel on-control!)
             let
                 store $ :store reel
                 states $
@@ -85,16 +92,17 @@
                   , .unwrap-or $ {}
                 branch $ >> states :knowledge-graph
                 cursor $ decode-map-as
-                  option:unwrap-or (get branch :cursor) ([])
+                  .unwrap-or (get branch :cursor) ([])
                   List respo.schema/CoordKey
-                reader-state $ app.schema/decode-reader-state $ option:unwrap-or (get branch :data) ({})
+                reader-state $ app.schema/decode-reader-state $ .unwrap-or (get branch :data) ({})
               div ({}) (comp-knowledge-graph cursor reader-state)
                 if dev?
-                  Option :some $ comp-typed-reel (>> states :reel) reel $ {}
-                  Option :none
+                  Some $ comp-typed-reel (>> states :reel) reel ({}) on-control!
+                  , None
           :examples $ []
           :schema $ quote $ Fn
-            reel.typed/State app.schema/Op $ Map Tag Dynamic
+            reel.typed/State Op $ Map Tag Dynamic
+            Fn reel.typed/Control $ -> Unit
             -> respo.schema/Component
         'comp-global-map-network $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-global-map-network (graph-data)
@@ -106,7 +114,7 @@
                   {} $ :class-name style-overview-network-note
                   <> "|关系网络 · 拖动空白处平移，滚轮缩放；颜色对应数域、四元数、几何代数与时空主线。"
           :examples $ []
-          :schema $ quote $ Fn (List app.comp.container/NetworkElement) (-> respo.schema/Component)
+          :schema $ quote $ Fn (List NetworkElement) (-> respo.schema/Component)
         'comp-heatmap-view $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-heatmap-view (state cursor)
             div
@@ -164,7 +172,7 @@
                                   and
                                     = (graph-domain-key doc)
                                       (get domain :key) .unwrap
-                                    option:some? $ find (:ids stage)
+                                    .some? $ find (:ids stage)
                                       fn (id)
                                         = id $ :id doc
                                 target $ first matches
@@ -205,7 +213,7 @@
           :code $ quote $ defcomp comp-knowledge-graph (cursor state)
             let
                 selected-id $ :selected state
-                node $ option:unwrap-or (find-knowledge-node selected-id)
+                node $ .unwrap-or (find-knowledge-node selected-id)
                   (first knowledge-nodes) .unwrap
                 blueprint node
                 sections $ card-queue node blueprint
@@ -252,9 +260,9 @@
                     {} $ :class-name style-history-track
                     map-indexed history-timeline-ids $ fn (idx id)
                       let
-                          target $ option:unwrap $ find-knowledge-node id
+                          target $ .unwrap $ find-knowledge-node id
                           current? $ = id timeline-active-id
-                          visited? $ option:some? $ find visit-history
+                          visited? $ .some? $ find visit-history
                             fn (visited-id) (= visited-id id)
                         [] idx $ div
                           {} $ :class-name style-history-item
@@ -384,7 +392,7 @@
                       map-indexed ([] |complex-numbers |quaternions |clifford-algebra |minkowski-spacetime)
                         fn (idx id)
                           let
-                              target $ option:unwrap $ find-knowledge-node id
+                              target $ .unwrap $ find-knowledge-node id
                             [] idx $ button $ {} (:class-name style-reader-nav-button)
                               :inner-text $ :label target
                               :on-click $ fn (e d!)
@@ -408,7 +416,7 @@
                           distinct $ reverse visit-history
                           fn (idx id)
                             let
-                                target $ option:unwrap $ find-knowledge-node id
+                                target $ .unwrap $ find-knowledge-node id
                               [] idx $ button $ {} (:class-name style-reader-history-button)
                                 :inner-text $ str "|←" | $ :label target
                                 :on-click $ fn (e d!)
@@ -580,7 +588,7 @@
                           {} $ :class-name style-reader-related-summary
                           <> $ :summary item
                         show
-                            Option :some $ :tags item
+                            Some $ :tags item
                             , .some?
                           div
                             {} $ :class-name style-reader-tag-row
@@ -717,7 +725,7 @@
                                       map-indexed (:ids branch)
                                         fn (card-idx id)
                                           let
-                                              target $ option:unwrap $ find-card-blueprint id
+                                              target $ .unwrap $ find-card-blueprint id
                                             [] id $ button
                                               {} (:class-name style-timeline-event)
                                                 :on-click $ fn (e d!)
@@ -728,13 +736,13 @@
                                                     struct-with state $ :view :reader
                                                     :selected $ if
                                                       =
-                                                        option:unwrap-or (:kind target) :concept
+                                                        .unwrap-or (:kind target) :concept
                                                         , :section
-                                                      option:unwrap $ :parent target
+                                                      .unwrap $ :parent target
                                                       , id
                                                     :active-section $ if
                                                       =
-                                                        option:unwrap-or (:kind target) :concept
+                                                        .unwrap-or (:kind target) :concept
                                                         , :section
                                                       , id |history
                                                   , &unit
@@ -819,13 +827,13 @@
             when (= action :unmount)
               let
                   cy $ get @*knowledge-network-instances el
-                when (option:some? cy)
-                  .!destroy $ option:unwrap cy
+                when (.some? cy)
+                  .!destroy $ .unwrap cy
                   reset! *knowledge-network-instances $ dissoc @*knowledge-network-instances el
             , &unit
           :examples $ []
           :schema $ quote $ Fn
-            List $ Map Tag $ Map Tag app.comp.container/NetworkField
+            List $ Map Tag $ Map Tag NetworkField
             -> respo.schema/Effect
             :features :js-ffi
         'encode-network-element $ %{} 'CodeEntry (:doc |)
@@ -846,8 +854,8 @@
                   :label $ :relation edge
                   :kind $ :kind edge
           :examples $ []
-          :schema $ quote $ Fn app.comp.container/NetworkElement
-            -> $ Map Tag $ Map Tag app.comp.container/NetworkField
+          :schema $ quote $ Fn NetworkElement
+            -> $ Map Tag $ Map Tag NetworkField
         'find-card-blueprint $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn find-card-blueprint (id) (get knowledge-docs id)
           :examples $ []
@@ -950,19 +958,27 @@
         'knowledge-doc-reference-ids $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn knowledge-doc-reference-ids (doc)
             let
-                links $ option:unwrap-or (:links doc) ([])
-                queue $ option:unwrap-or (:queue doc) ([])
+                links $
+                  :links doc
+                  , .unwrap-or $ []
+                queue $
+                  :queue doc
+                  , .unwrap-or $ []
                 parent $ :parent doc
-                relations $ option:unwrap-or (:relations doc) ([])
+                relations $
+                  :relations doc
+                  , .unwrap-or $ []
               concat links $ concat queue $ concat
-                if (option:some? parent)
-                  [] $ option:unwrap parent
+                if (parent .some?)
+                  [] $ parent .unwrap
                   []
                 map relations $ fn (relation)
                   if
-                    = :outgoing $ option:unwrap-or (:direction relation) :outgoing
-                    option:unwrap-or (:target relation) ||
-                    option:unwrap-or (:source relation) ||
+                    = :outgoing $
+                      :direction relation
+                      , .unwrap-or :outgoing
+                    (:target relation) .unwrap-or ||
+                    (:source relation) .unwrap-or ||
           :examples $ []
           :schema $ quote $ Fn app.schema/KnowledgeDoc
             -> $ List String
@@ -1004,7 +1020,7 @@
               , knowledge-edges
           :examples $ []
           :schema $ quote $ Fn
-            -> $ List app.comp.container/NetworkElement
+            -> $ List NetworkElement
         'knowledge-nodes $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def knowledge-nodes
             filter
@@ -1022,14 +1038,14 @@
                 pairs $ map paths $ fn (path)
                   let
                       lines $ split-lines $ read-file path
-                      closing-index $ inc $ option:unwrap
+                      closing-index $ inc $ .unwrap
                         find-index (rest lines)
                           fn (line) (= line |---)
                       metadata $ parse-cirru-edn $ join-string
-                        slice lines 1 $ Option :some closing-index
+                        slice lines 1 $ Some closing-index
                         , "|\n"
                       body $ join-string
-                        slice lines (inc closing-index) (Option :none)
+                        slice lines (inc closing-index) None
                         , "|\n"
                       doc $ assoc
                         assoc (assoc metadata :content body) :source path
@@ -1042,7 +1058,7 @@
                       , doc
                 diagnostics $ validate-knowledge-docs! $ map pairs
                   fn (pair)
-                    decode-knowledge-doc $ option:unwrap $ last pair
+                    decode-knowledge-doc $ .unwrap $ last pair
                 errors $ :errors diagnostics
                 warnings $ :warnings diagnostics
                 _warnings $ &doseq (warning warnings)
@@ -1062,7 +1078,9 @@
             :code $ quote $ let
                 docs knowledge-docs
                 diagnostics $ validate-knowledge-docs! $ .to-list (distinct-values docs)
-                node $ option:unwrap $ find-knowledge-node |complex-numbers
+                node $
+                  find-knowledge-node |complex-numbers
+                  , .unwrap
               assert= 51 $ count docs
               assert= 0 $ count $ :errors diagnostics
               assert= "|复数" $ :label node
@@ -1105,18 +1123,18 @@
                       , part
                   app.schema/KnowledgeDoc :id
                     str (:id doc) |-chapter- idx
-                    , :content chapter-content :source (:source doc) :label chapter-title :title (Option :some chapter-title) :summary (Option :none) :kind (Option :none) :era (Option :none) :formula (Option :none) :tags
-                      Option :some $
+                    , :content chapter-content :source (:source doc) :label chapter-title :title (Some chapter-title) :summary None :kind None :era None :formula None :tags
+                      Some $
                         :tags doc
                         , .unwrap-or $ #{}
                           kind-label $
                             :kind doc
                             , .unwrap-or :concept
                       , :links
-                        Option :some $
+                        Some $
                           :links doc
                           , .unwrap-or $ []
-                        , :parent (Option :none) :queue (Option :none) :relations $ Option :none
+                        , :parent None :queue None :relations None
           :examples $ []
           :schema $ quote $ Fn app.schema/KnowledgeDoc
             -> $ List app.schema/KnowledgeDoc
@@ -1149,7 +1167,9 @@
                 let
                     outgoing? $ = id $ :source edge
                     other-id $ if outgoing? (:target edge) (:source edge)
-                    other $ option:unwrap $ find-knowledge-node other-id
+                    other $
+                      find-knowledge-node other-id
+                      , .unwrap
                   {} (:id other-id)
                     :label $ :label other
                     :summary $
@@ -1163,13 +1183,17 @@
         'section-links-text $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn section-links-text (section)
             let
-                links $ option:unwrap-or (:links section) ([])
+                links $
+                  :links section
+                  , .unwrap-or $ []
                 labels $ map links $ fn (id)
                   let
                       doc $
                         get knowledge-docs id
                         , .unwrap
-                      target $ option:unwrap $ find-knowledge-node id
+                      target $
+                        find-knowledge-node id
+                        , .unwrap
                     (:title doc) .unwrap-or $ :label target
               join-string labels "| · "
           :examples $ []
@@ -1945,7 +1969,7 @@
                       count $ filter ids $ fn (candidate) (= id candidate)
                       , 1
                 duplicate-errors $ map duplicates $ fn (id)
-                  app.schema/KnowledgeDiagnostic :level :error :code :duplicate-id :source id :detail (Option :none) :message $ str "|Duplicate knowledge id: " id
+                  app.schema/KnowledgeDiagnostic :level :error :code :duplicate-id :source id :detail None :message $ str "|Duplicate knowledge id: " id
                 broken-reference-errors $ mapcat documents $ fn (doc)
                   let
                       doc-id $ :id doc
@@ -1953,7 +1977,7 @@
                         fn (target-id)
                           not $ contains? docs target-id
                     map missing $ fn (target-id)
-                      app.schema/KnowledgeDiagnostic :level :error :code :broken-reference :source doc-id :detail (Option :some target-id) :message $ str "|Broken knowledge reference: " doc-id "|→" target-id
+                      app.schema/KnowledgeDiagnostic :level :error :code :broken-reference :source doc-id :detail (Some target-id) :message $ str "|Broken knowledge reference: " doc-id "|→" target-id
                 queue-errors $ mapcat documents $ fn (doc)
                   let
                       doc-id $ :id doc
@@ -1964,7 +1988,7 @@
                           let
                               target $ get docs target-id
                             if (target .none?) true $ let
-                                target-doc $ option:unwrap target
+                                target-doc $ target .unwrap
                               or
                                 not= :section $
                                   :kind target-doc
@@ -1973,7 +1997,7 @@
                                   :parent target-doc
                                   , .unwrap-or ||
                     map invalid $ fn (target-id)
-                      app.schema/KnowledgeDiagnostic :level :error :code :invalid-queue-entry :source doc-id :detail (Option :some target-id) :message $ str "|Invalid knowledge queue: " doc-id "|→" target-id
+                      app.schema/KnowledgeDiagnostic :level :error :code :invalid-queue-entry :source doc-id :detail (Some target-id) :message $ str "|Invalid knowledge queue: " doc-id "|→" target-id
                 relation-errors $ mapcat documents $ fn (doc)
                   let
                       doc-id $ :id doc
@@ -2000,7 +2024,7 @@
                                 , .unwrap-or :unknown
                               (:source relation) .none?
                     map invalid $ fn (relation)
-                      app.schema/KnowledgeDiagnostic :level :error :code :invalid-relation :source doc-id :detail (Option :some relation) :message $ str "|Invalid knowledge relation: " doc-id "|→" $ format-cirru-edn relation
+                      app.schema/KnowledgeDiagnostic :level :error :code :invalid-relation :source doc-id :detail (Some relation) :message $ str "|Invalid knowledge relation: " doc-id "|→" $ format-cirru-edn relation
                 warnings $ mapcat documents $ fn (doc)
                   let
                       doc-id $ :id doc
@@ -2026,14 +2050,14 @@
                           , .unwrap-or $ []
                     concat
                       if missing-summary?
-                        [] $ app.schema/KnowledgeDiagnostic :level :warning :code :missing-summary :source doc-id :detail (Option :none) :message $ str "|Missing summary: " doc-id
+                        [] $ app.schema/KnowledgeDiagnostic :level :warning :code :missing-summary :source doc-id :detail None :message $ str "|Missing summary: " doc-id
                         []
                       concat
                         if missing-tags?
-                          [] $ app.schema/KnowledgeDiagnostic :level :warning :code :missing-tags :source doc-id :detail (Option :none) :message $ str "|Missing tags: " doc-id
+                          [] $ app.schema/KnowledgeDiagnostic :level :warning :code :missing-tags :source doc-id :detail None :message $ str "|Missing tags: " doc-id
                           []
                         if isolated?
-                          [] $ app.schema/KnowledgeDiagnostic :level :warning :code :isolated-node :source doc-id :detail (Option :none) :message $ str "|Isolated knowledge node: " doc-id
+                          [] $ app.schema/KnowledgeDiagnostic :level :warning :code :isolated-node :source doc-id :detail None :message $ str "|Isolated knowledge node: " doc-id
                           []
               app.schema/KnowledgeDiagnostics :warnings warnings :errors $ concat duplicate-errors $ concat broken-reference-errors (concat queue-errors relation-errors)
           :examples $ []
@@ -2049,7 +2073,7 @@
                 relation $ .unwrap $ last errors
               assert= 2 $ count errors
               assert= :broken-reference $ :code reference
-              assert= (Option :some |missing) (:detail reference)
+              assert= (Some |missing) (:detail reference)
               assert= :invalid-relation $ :code relation
               assert=
                 first $ .unwrap $ :relations doc
@@ -2086,48 +2110,35 @@
       :defs $ {}
         '*reel $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *reel
-            typed/State :base schema/store :store schema/store :records ([]) :pointer (Option :none) :stopped? false :display? false :merged? false
+            typed/State :base schema/store :store schema/store :records ([]) :pointer None :stopped? false :display? false :merged? false
           :examples $ []
           :schema $ quote $ Ref
-            reel.typed/State app.schema/Op $ Map Tag Dynamic
+            typed/State schema/Op $ Map Tag Dynamic
         '*storage-ready? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *storage-ready? false
           :examples $ []
           :schema $ quote $ Ref Bool
         'dispatch! $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn dispatch! (raw-op)
-            if
-              = (enum-definition raw-op) (Option :some typed/Control)
-              dispatch-resolved! $ decode-map-as raw-op 'reel.typed/Control
-              match (typed/decode-control raw-op)
-                (:some control) (dispatch-resolved! control)
-                (:none)
-                  dispatch-resolved! $ decode-map-as raw-op 'app.schema/Op
+          :code $ quote $ defn dispatch! (action)
+            reset! *reel $ typed/record-op updater @*reel action
+              decode-map-as (shortid/generate) 'String
+              decode-map-as (js/Date.now) 'Number
             , &unit
           :examples $ []
-          :schema $ quote $ Fn AnyEnum (-> Unit) (:features :js-ffi) (:open :decode)
-        'dispatch-resolved! $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn dispatch-resolved! (op)
-            hint-fn $ Fn app.schema/ResolvedOp (-> Unit) (:features :js-ffi)
-            reset! *reel $ match op
-              (reel.typed/Control control) (typed/apply-control updater @*reel control)
-              (app.schema/Op action)
-                typed/record-op updater @*reel action
-                  decode-map-as (shortid/generate) 'String
-                  decode-map-as (js/Date.now) 'Number
-            , &unit
-          :examples $ []
+          :schema $ quote $ Fn schema/Op (-> Unit) (:features :js-ffi)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println |Running-mode: $ if config/dev? |dev |release
             if config/dev? $ load-console-formatter!
             render-app!
             add-watch! *reel :changes $ fn (reel prev) (render-app!)
-            listen-devtools! |k dispatch!
+            listen-devtools-toggle! |k $ fn () $ on-control! (typed/Control :toggle)
             try
               do
                 match
-                  browser/storage-get $ option:unwrap $ get config/site :storage-key
+                  browser/storage-get $
+                    get config/site :storage-key
+                    , .unwrap
                   (:some raw)
                     dispatch! $ schema/Op :hydrate-storage $ schema/decode-store (parse-cirru-edn raw)
                   (:none) &unit
@@ -2148,13 +2159,19 @@
           :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'mount-target $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn mount-target ()
-            option:unwrap $ dom/query-selector |.app
+            (dom/query-selector |.app) .unwrap
           :examples $ []
           :schema $ quote $ Fn (-> respo.dom/DomElement)
+        'on-control! $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn on-control! (control)
+            reset! *reel $ typed/apply-control updater @*reel control
+            , &unit
+          :examples $ []
+          :schema $ quote $ Fn typed/Control (-> Unit)
         'persist-storage! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-storage! ()
             when @*storage-ready? $ browser/storage-set!
-              option:unwrap $ get config/site :storage-key
+              .unwrap $ get config/site :storage-key
               format-cirru-edn $ :store @*reel
             , &unit
           :examples $ []
@@ -2173,7 +2190,7 @@
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! ()
             render-with! (mount-target)
-              fn () $ comp-container @*reel
+              fn () $ comp-container @*reel on-control!
               , dispatch!
           :examples $ []
           :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
@@ -2184,7 +2201,7 @@
             app.comp.container :refer $ comp-container
             app.updater :refer $ updater
             app.schema :as schema
-            reel.util :refer $ listen-devtools!
+            reel.util :refer $ listen-devtools-toggle!
             reel.typed :as typed
             app.config :as config
             |./calcit.build-errors.mjs :default build-errors
@@ -2266,23 +2283,19 @@
             :view Tag
           :examples $ []
           :schema $ quote StructDef
-        'ResolvedOp $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defunion ResolvedOp Op reel.typed/Control
-          :examples $ []
-          :schema $ quote UnionDef
         'decode-knowledge-doc $ %{} 'CodeEntry
           :doc "|在 Markdown 加载/验证边界一次解码字段及嵌套关系，保留具体错误路径；不使用 Map 到 Struct 的断言。"
           :code $ quote $ defn decode-knowledge-doc (raw) (decode-map-as raw 'app.schema/KnowledgeDoc)
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> app.schema/KnowledgeDoc)
+          :schema $ quote $ Fn Dynamic (-> KnowledgeDoc)
           :tests $ [] $ %{} 'TestEntry (:name |preserve-absent-versus-empty-tags)
             :code $ quote $ let
                 missing $ decode-knowledge-doc $ {} (:id |probe) (:content |body) (:source |synthetic) (:label |Probe)
                 explicit-tags $ decode-knowledge-doc $ {} (:id |probe) (:content |body) (:source |synthetic) (:label |Probe)
                   :tags $ #{}
-              assert= (Option :none) (:tags missing)
-              assert |explicit-empty-tags-remain-present $ option:some? $ :tags explicit-tags
-              assert= 0 $ count $ option:unwrap (:tags explicit-tags)
+              assert= None $ :tags missing
+              assert |explicit-empty-tags-remain-present $ .some? $ :tags explicit-tags
+              assert= 0 $ count $ .unwrap (:tags explicit-tags)
         'decode-reader-state $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-reader-state (raw)
             let
@@ -2297,7 +2310,7 @@
                   , fields
                 , 'app.schema/ReaderState
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> app.schema/ReaderState)
+          :schema $ quote $ Fn Dynamic (-> ReaderState)
           :tests $ [] $ %{} 'TestEntry (:name |legacy-map-and-archived-struct)
             :code $ quote $ let
                 restored $ decode-reader-state $ {} (:selected |quaternions) (:active-section |history)
@@ -2323,7 +2336,7 @@
             let
                 store $ decode-map-as raw $ Map Tag Dynamic
                 states $ decode-map-as
-                  option:unwrap-or (get store :states) ({})
+                  .unwrap-or (get store :states) ({})
                   Map Dynamic Dynamic
                 cursor-states $ match (get states :cursor)
                   (:some raw-cursor)
@@ -2361,13 +2374,13 @@
               (:states cursor s)
                 assoc store :states $ decode-map-as
                   update-state-tree
-                    option:unwrap-or (get store :states) ({})
+                    .unwrap-or (get store :states) ({})
                     , cursor s
                   Map Dynamic Dynamic
               (:reader cursor s)
                 assoc store :states $ decode-map-as
                   update-state-tree
-                    option:unwrap-or (get store :states) ({})
+                    .unwrap-or (get store :states) ({})
                     , cursor s
                   Map Dynamic Dynamic
               (:hydrate-storage data) data
@@ -2381,13 +2394,13 @@
                   app.schema/Op :states ([] :knowledge-graph)
                     {} $ :selected |quaternions
                   , |state 1
-              assert= |kept $ option:unwrap $ get changed :content
+              assert= |kept $ .unwrap $ get changed :content
               assert=
                 {}
                   :cursor $ []
                   :knowledge-graph $ {} $ :data
                     {} $ :selected |quaternions
-                option:unwrap $ get changed :states
+                .unwrap $ get changed :states
               assert= initial $ updater changed (app.schema/Op :hydrate-storage initial) |restore 2
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater

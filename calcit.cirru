@@ -90,7 +90,7 @@
                 states $
                   get store :states
                   , .unwrap-or $ {}
-                branch $ >> states :knowledge-graph
+                branch $ decode-map-as (>> states :knowledge-graph) (Map respo.schema/CoordKey Dynamic)
                 cursor $ decode-map-as
                   .unwrap-or (get branch :cursor) ([])
                   List respo.schema/CoordKey
@@ -128,7 +128,7 @@
                   {} (:class-name style-overview-map-close)
                     :on-click $ fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn app.schema/Op $ -> Unit
+                        Fn Op $ -> Unit
                         -> Unit
                       d! $ Op :reader cursor $ struct-with state (:view :reader)
                       , &unit
@@ -192,7 +192,7 @@
                                       , "| · " $ :era stage
                                     :on-click $ fn (e d!)
                                       hint-fn $ Fn respo.schema/RespoEvent
-                                        Fn app.schema/Op $ -> Unit
+                                        Fn Op $ -> Unit
                                         -> Unit
                                       when (target .some?)
                                         d! $ Op :reader cursor $ struct-with
@@ -235,7 +235,7 @@
                 timeline-active-id $ timeline-selected .unwrap-or $ timeline-parent .unwrap-or selected-id
                 navigate! $ fn (target-id d!)
                   hint-fn $ Fn String
-                    Fn app.schema/Op $ -> Unit
+                    Fn Op $ -> Unit
                     -> Unit
                   d! $ Op :reader cursor $ app.schema/ReaderState :selected target-id :active-section |history :history
                     take-last
@@ -272,7 +272,7 @@
                                 if visited? (str-spaced style-history-node style-history-node-visited) style-history-node
                               :on-click $ fn (e d!)
                                 hint-fn $ Fn respo.schema/RespoEvent
-                                  Fn app.schema/Op $ -> Unit
+                                  Fn Op $ -> Unit
                                   -> Unit
                                 navigate! id d!
                                 , &unit
@@ -306,7 +306,7 @@
                           , style-history-view-toggle
                         :on-click $ fn (e d!)
                           hint-fn $ Fn respo.schema/RespoEvent
-                            Fn app.schema/Op $ -> Unit
+                            Fn Op $ -> Unit
                             -> Unit
                           d! $ Op :reader cursor $ struct-with state (:view :map)
                           , &unit
@@ -319,7 +319,7 @@
                           , style-history-view-toggle
                         :on-click $ fn (e d!)
                           hint-fn $ Fn respo.schema/RespoEvent
-                            Fn app.schema/Op $ -> Unit
+                            Fn Op $ -> Unit
                             -> Unit
                           d! $ Op :reader cursor $ struct-with state (:view :timeline)
                           , &unit
@@ -332,7 +332,7 @@
                           , style-history-view-toggle
                         :on-click $ fn (e d!)
                           hint-fn $ Fn respo.schema/RespoEvent
-                            Fn app.schema/Op $ -> Unit
+                            Fn Op $ -> Unit
                             -> Unit
                           d! $ Op :reader cursor $ struct-with state (:view :heatmap)
                           , &unit
@@ -369,7 +369,7 @@
                               , style-reader-outline-item
                             :on-click $ fn (e d!)
                               hint-fn $ Fn respo.schema/RespoEvent
-                                Fn app.schema/Op $ -> Unit
+                                Fn Op $ -> Unit
                                 -> Unit
                               d! $ Op :reader cursor $ struct-with state
                                 :active-section $ :id section
@@ -397,7 +397,7 @@
                               :inner-text $ :label target
                               :on-click $ fn (e d!)
                                 hint-fn $ Fn respo.schema/RespoEvent
-                                  Fn app.schema/Op $ -> Unit
+                                  Fn Op $ -> Unit
                                   -> Unit
                                 navigate! id d!
                                 , &unit
@@ -421,7 +421,7 @@
                                 :inner-text $ str "|←" | $ :label target
                                 :on-click $ fn (e d!)
                                   hint-fn $ Fn respo.schema/RespoEvent
-                                    Fn app.schema/Op $ -> Unit
+                                    Fn Op $ -> Unit
                                     -> Unit
                                   navigate! id d!
                                   , &unit
@@ -437,7 +437,7 @@
                           {} (:class-name style-reader-relation-button)
                             :on-click $ fn (e d!)
                               hint-fn $ Fn respo.schema/RespoEvent
-                                Fn app.schema/Op $ -> Unit
+                                Fn Op $ -> Unit
                                 -> Unit
                               navigate! (:id item) d!
                               , &unit
@@ -513,7 +513,7 @@
                             , style-reader-section-card
                           :on-click $ fn (e d!)
                             hint-fn $ Fn respo.schema/RespoEvent
-                              Fn app.schema/Op $ -> Unit
+                              Fn Op $ -> Unit
                               -> Unit
                             d! $ Op :reader cursor $ struct-with state
                               :active-section $ :id section
@@ -574,7 +574,7 @@
                         {} (:class-name style-reader-related-card)
                           :on-click $ fn (e d!)
                             hint-fn $ Fn respo.schema/RespoEvent
-                              Fn app.schema/Op $ -> Unit
+                              Fn Op $ -> Unit
                               -> Unit
                             navigate! (:id item) d!
                             , &unit
@@ -612,7 +612,7 @@
                       {} (:class-name style-overview-map-close)
                         :on-click $ fn (e d!)
                           hint-fn $ Fn respo.schema/RespoEvent
-                            Fn app.schema/Op $ -> Unit
+                            Fn Op $ -> Unit
                             -> Unit
                           d! $ Op :reader cursor $ struct-with state (:view :reader)
                           , &unit
@@ -651,7 +651,7 @@
                   {} (:class-name style-overview-map-close)
                     :on-click $ fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn app.schema/Op $ -> Unit
+                        Fn Op $ -> Unit
                         -> Unit
                       d! $ Op :reader cursor $ struct-with state (:view :reader)
                       , &unit
@@ -730,7 +730,7 @@
                                               {} (:class-name style-timeline-event)
                                                 :on-click $ fn (e d!)
                                                   hint-fn $ Fn respo.schema/RespoEvent
-                                                    Fn app.schema/Op $ -> Unit
+                                                    Fn Op $ -> Unit
                                                     -> Unit
                                                   d! $ Op :reader cursor $ struct-with
                                                     struct-with state $ :view :reader
@@ -1013,7 +1013,7 @@
           :code $ quote $ defn knowledge-network-elements ()
             concat
               map knowledge-nodes $ fn (doc)
-                hint-fn $ Fn app.schema/KnowledgeDoc $ -> app.comp.container/NetworkElement
+                hint-fn $ Fn app.schema/KnowledgeDoc $ -> NetworkElement
                 NetworkNode :id (:id doc) :label (:label doc) :era
                   .unwrap-or (:era doc) |
                   , :domain (graph-domain-key doc) :kind $ kind-label $ .unwrap-or (:kind doc) :concept
@@ -2287,7 +2287,7 @@
           :doc "|在 Markdown 加载/验证边界一次解码字段及嵌套关系，保留具体错误路径；不使用 Map 到 Struct 的断言。"
           :code $ quote $ defn decode-knowledge-doc (raw) (decode-map-as raw 'app.schema/KnowledgeDoc)
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> KnowledgeDoc)
+          :schema $ quote $ Fn Input (-> KnowledgeDoc) (:generics Input)
           :tests $ [] $ %{} 'TestEntry (:name |preserve-absent-versus-empty-tags)
             :code $ quote $ let
                 missing $ decode-knowledge-doc $ {} (:id |probe) (:content |body) (:source |synthetic) (:label |Probe)
@@ -2310,7 +2310,7 @@
                   , fields
                 , 'app.schema/ReaderState
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> ReaderState)
+          :schema $ quote $ Fn Input (-> ReaderState) (:generics Input)
           :tests $ [] $ %{} 'TestEntry (:name |legacy-map-and-archived-struct)
             :code $ quote $ let
                 restored $ decode-reader-state $ {} (:selected |quaternions) (:active-section |history)
@@ -2356,8 +2356,9 @@
                   (:none) cursor-states
               assoc store :states checked-states
           :examples $ []
-          :schema $ quote $ Fn Dynamic
+          :schema $ quote $ Fn Input
             -> $ Map Tag Dynamic
+            :generics Input
         'store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def store
             {} $ :states $ {}

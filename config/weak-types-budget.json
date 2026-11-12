@@ -1,19 +1,12 @@
 {
   "coverage": {
-    "app.comp.container/*knowledge-network-instances": "partial",
     "app.comp.container/comp-container": "partial",
     "app.main/*reel": "partial",
-    "app.schema/decode-knowledge-doc": "partial",
-    "app.schema/decode-reader-state": "partial",
     "app.schema/decode-store": "partial",
     "app.schema/store": "partial",
     "app.updater/updater": "partial"
   },
   "weak": {
-    "app.comp.container/*knowledge-network-instances": {
-      "schema-dynamic": 2,
-      "unresolved": 2
-    },
     "app.comp.container/comp-container": {
       "schema-dynamic": 1,
       "unresolved": 1
@@ -22,17 +15,9 @@
       "schema-dynamic": 1,
       "unresolved": 1
     },
-    "app.schema/decode-knowledge-doc": {
-      "schema-dynamic": 1,
-      "unresolved": 1
-    },
-    "app.schema/decode-reader-state": {
-      "schema-dynamic": 1,
-      "unresolved": 1
-    },
     "app.schema/decode-store": {
-      "schema-dynamic": 2,
-      "unresolved": 2
+      "schema-dynamic": 1,
+      "unresolved": 1
     },
     "app.schema/store": {
       "schema-dynamic": 1,

@@ -13,7 +13,16 @@
         '*knowledge-network-instances $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *knowledge-network-instances ({})
           :examples $ []
-          :schema $ quote $ Ref (Map Dynamic Dynamic)
+          :schema $ quote $ Ref (Map JsObject CytoscapeHost)
+        'CytoscapeHost $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ deftrait CytoscapeHost
+            .center $ Fn CytoscapeHost $ -> CytoscapeHost
+            .destroy $ Fn CytoscapeHost $ -> Unit
+            .resize $ Fn CytoscapeHost $ -> CytoscapeHost
+          :examples $ []
+          :ffi $ {} (:backend :js) (:kind :external-object) (:target :browser)
+            :names $ {} (:center |center) (:destroy |destroy) (:resize |resize)
+          :schema $ quote Trait
         'NetworkElement $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defunion NetworkElement app.comp.container/NetworkNode app.schema/KnowledgeEdge
           :examples $ []
@@ -104,6 +113,7 @@
             reel.typed/State Op $ Map Tag Dynamic
             Fn reel.typed/Control $ -> Unit
             -> respo.schema/Component
+            :features :state
         'comp-global-map-network $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-global-map-network (graph-data)
             []
@@ -114,7 +124,7 @@
                   {} $ :class-name style-overview-network-note
                   <> "|关系网络 · 拖动空白处平移，滚轮缩放；颜色对应数域、四元数、几何代数与时空主线。"
           :examples $ []
-          :schema $ quote $ Fn (List NetworkElement) (-> respo.schema/Component)
+          :schema $ quote $ Fn (List NetworkElement) (-> respo.schema/Component) (:features :state)
         'comp-heatmap-view $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-heatmap-view (state cursor)
             div
@@ -637,7 +647,7 @@
                   = (:view state) :heatmap
                   comp-heatmap-view state cursor
           :examples $ []
-          :schema $ quote $ Fn (List respo.schema/CoordKey) app.schema/ReaderState (-> respo.schema/Component)
+          :schema $ quote $ Fn (List respo.schema/CoordKey) app.schema/ReaderState (-> respo.schema/Component) (:features :state)
         'comp-timeline-view $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-timeline-view (state cursor)
             div
@@ -819,23 +829,25 @@
                       [] $ {} (:selector |edge)
                         :style $ {} (:opacity |0.72) (:overlay-opacity |0)
                     :layout $ js-object (:name |fcose) (:animate false) (:fit false) (:padding 96) (:quality |proof) (:nodeRepulsion 90000) (:idealEdgeLength 380) (:edgeElasticity 0.15) (:nodeSeparation 120) (:gravity 0.02) (:gravityRange 3.8) (:numIter 2500) (:tilingPaddingVertical 60) (:tilingPaddingHorizontal 60) (:tile true) (:randomize true) (:nodeDimensionsIncludeLabels true)
-                  cy $ cytoscape options
-                reset! *knowledge-network-instances $ assoc @*knowledge-network-instances el cy
+                  cy $ js-cast (cytoscape options) 'CytoscapeHost
+                  element $ contract/expect-object |knowledge-network-element el
+                reset! *knowledge-network-instances $ assoc @*knowledge-network-instances element cy
                 browser/set-timeout!
-                  fn () (.!resize cy) (.!center cy) &unit
+                  fn () (cy .resize) (cy .center) &unit
                   , 24
             when (= action :unmount)
               let
-                  cy $ get @*knowledge-network-instances el
+                  element $ contract/expect-object |knowledge-network-element el
+                  cy $ get @*knowledge-network-instances element
                 when (.some? cy)
-                  .!destroy $ .unwrap cy
-                  reset! *knowledge-network-instances $ dissoc @*knowledge-network-instances el
+                  .destroy $ .unwrap cy
+                  reset! *knowledge-network-instances $ dissoc @*knowledge-network-instances element
             , &unit
           :examples $ []
           :schema $ quote $ Fn
             List $ Map Tag $ Map Tag NetworkField
             -> respo.schema/Effect
-            :features :js-ffi
+            :features :js-ffi :state
         'encode-network-element $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn encode-network-element (element)
             match element
@@ -2090,6 +2102,7 @@
             |cytoscape-fcose :default fcose
             app.schema :refer $ Op decode-knowledge-doc
             js-ffi.browser :as browser
+            js-ffi.contract :as contract
     'app.config $ %{} 'FileEntry
       :defs $ {}
         'dev? $ %{} 'CodeEntry (:doc |)
@@ -2125,7 +2138,7 @@
               decode-map-as (js/Date.now) 'Number
             , &unit
           :examples $ []
-          :schema $ quote $ Fn schema/Op (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn schema/Op (-> Unit) (:features :js-ffi :state)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println |Running-mode: $ if config/dev? |dev |release
@@ -2156,7 +2169,7 @@
             println |App-started.
             , &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi :state)
         'mount-target $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn mount-target ()
             (dom/query-selector |.app) .unwrap
@@ -2167,7 +2180,7 @@
             reset! *reel $ typed/apply-control updater @*reel control
             , &unit
           :examples $ []
-          :schema $ quote $ Fn typed/Control (-> Unit)
+          :schema $ quote $ Fn typed/Control (-> Unit) (:features :state)
         'persist-storage! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-storage! ()
             when @*storage-ready? $ browser/storage-set!
@@ -2175,7 +2188,7 @@
               format-cirru-edn $ :store @*reel
             , &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi :state)
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! ()
             if (js-nullish? build-errors)
@@ -2186,14 +2199,14 @@
               hud! |error build-errors
             , &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi :state)
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! ()
             render-with! (mount-target)
               fn () $ comp-container @*reel on-control!
               , dispatch!
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi :state)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.main
           :require

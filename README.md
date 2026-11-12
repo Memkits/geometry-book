@@ -17,7 +17,7 @@ caps verify --toolchain
 yarn dev
 ```
 
-Use paired formal Calcit CLI/procs 0.41.0, Caps 0.1.1 and Node.js 24. Canonical source/dependencies
+Use paired formal Calcit CLI/procs 0.41.1, Caps 0.1.1 and Node.js 24. Canonical source/dependencies
 are `calcit.cirru` and `deps.cirru`; compact/package snapshots are retired.
 Edit source through the Calcit CLI. `yarn dev` compiles initially and starts Vite;
 run `calcit calcit.cirru --watch` in another terminal for live Calcit edits.
@@ -25,7 +25,7 @@ run `calcit calcit.cirru --watch` in another terminal for live Calcit edits.
 
 ### 迁移状态
 
-已配对正式 CLI/procs 0.41.0、Caps 0.1.1 与 Node 24，七个已发布模块通过 `caps --strict`。阅读器事件携带具名 `ReaderState`，状态路径使用 `CoordKey`，应用派发使用具名 `Op`，Reel 0.11.0 的面板和快捷键使用独立 `Control` 回调。知识网络以具名节点和边区分各自字段，在 Cytoscape 入口转成原有图数据。 Markdown 校验在编译阶段保留具名诊断，详情按引用目标字符串或关系对象区分。Markdown、存档格式和逐记录校验沿用。0.41.0 使用现行报告限制逐定义弱类型和覆盖率。
+已配对正式 CLI/procs 0.41.1、Caps 0.1.1 与 Node 24，七个已发布模块通过 `caps --strict`。阅读器事件携带具名 `ReaderState`，状态路径使用 `CoordKey`，应用派发使用具名 `Op`，Reel 0.11.0 的面板和快捷键使用独立 `Control` 回调。知识网络以具名节点和边区分各自字段，在 Cytoscape 入口转成原有图数据。 Markdown 校验在编译阶段保留具名诊断，详情按引用目标字符串或关系对象区分。Markdown、存档格式和逐记录校验沿用。0.41.1 使用现行报告限制逐定义弱类型和覆盖率。
 
 To build:
 

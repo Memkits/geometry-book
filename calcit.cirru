@@ -2350,7 +2350,7 @@
                 store $ decode-map-as raw $ Map Tag Dynamic
                 states $ decode-map-as
                   .unwrap-or (get store :states) ({})
-                  Map Dynamic Dynamic
+                  Map respo.schema/CoordKey Dynamic
                 cursor-states $ match (get states :cursor)
                   (:some raw-cursor)
                     if (nil? raw-cursor)
@@ -2360,7 +2360,7 @@
                 checked-states $ match (get cursor-states :knowledge-graph)
                   (:some raw-branch)
                     let
-                        branch $ decode-map-as raw-branch $ Map Dynamic Dynamic
+                        branch $ decode-map-as raw-branch $ Map respo.schema/CoordKey Dynamic
                         normalized $ match (get branch :data)
                           (:some data)
                             assoc branch :data $ decode-reader-state data
@@ -2390,13 +2390,13 @@
                   update-state-tree
                     .unwrap-or (get store :states) ({})
                     , cursor s
-                  Map Dynamic Dynamic
+                  Map respo.schema/CoordKey Dynamic
               (:reader cursor s)
                 assoc store :states $ decode-map-as
                   update-state-tree
                     .unwrap-or (get store :states) ({})
                     , cursor s
-                  Map Dynamic Dynamic
+                  Map respo.schema/CoordKey Dynamic
               (:hydrate-storage data) data
           :examples $ []
           :schema $ quote $ Fn (Map Tag Dynamic) app.schema/Op String Number

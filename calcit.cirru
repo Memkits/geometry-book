@@ -2311,17 +2311,20 @@
               assert= 0 $ count $ .unwrap (:tags explicit-tags)
         'decode-reader-state $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-reader-state (raw)
-            let
-                fields $ decode-map-as
-                  if (struct? raw) (&struct:to-map raw) raw
-                  Map Tag Dynamic
-              decode-map-as
-                merge
-                  {} (:selected |complex-numbers) (:active-section |history)
-                    :history $ []
-                    :view :reader
-                  , fields
-                , 'app.schema/ReaderState
+            if
+              and (struct? raw) (&struct:matches? raw ReaderState)
+              assert-type raw ReaderState
+              let
+                  fields $ decode-map-as
+                    if (struct? raw) (&struct:to-map raw) raw
+                    Map Tag Dynamic
+                decode-map-as
+                  merge
+                    {} (:selected |complex-numbers) (:active-section |history)
+                      :history $ []
+                      :view :reader
+                    , fields
+                  , 'app.schema/ReaderState
           :examples $ []
           :schema $ quote $ Fn Input (-> ReaderState) (:generics Input)
           :tests $ [] $ %{} 'TestEntry (:name |legacy-map-and-archived-struct)

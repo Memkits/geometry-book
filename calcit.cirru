@@ -2377,7 +2377,8 @@
             {} $ :states $ {}
               :cursor $ []
           :examples $ []
-          :schema $ quote $ Map Tag Dynamic
+          :schema $ quote $ Map Tag
+            Map Tag $ List respo.schema/CoordKey
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.schema
     'app.updater $ %{} 'FileEntry
@@ -2399,11 +2400,13 @@
                   Map respo.schema/CoordKey Dynamic
               (:hydrate-storage data) data
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic) app.schema/Op String Number
+          :schema $ quote $ Fn (Map Tag StoreValue) app.schema/Op String Number
             -> $ Map Tag Dynamic
+            :generics StoreValue
           :tests $ [] $ %{} 'TestEntry (:name |state-path-and-open-store)
             :code $ quote $ let
-                initial $ assoc app.schema/store :content |kept
+                initial $ {} (:content |kept)
+                  :states $ .unwrap $ get app.schema/store :states
                 changed $ updater initial
                   app.schema/Op :states ([] :knowledge-graph)
                     {} $ :selected |quaternions

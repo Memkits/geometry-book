@@ -96,9 +96,7 @@
           :code $ quote $ defcomp comp-container (reel on-control!)
             let
                 store $ :store reel
-                states $
-                  get store :states
-                  , .unwrap-or $ {}
+                states $ :states store
                 branch $ decode-map-as (>> states :knowledge-graph) (Map respo.schema/CoordKey Dynamic)
                 cursor $ decode-map-as
                   .unwrap-or (get branch :cursor) ([])
@@ -109,11 +107,9 @@
                   Some $ comp-typed-reel (>> states :reel) reel ({}) on-control!
                   , None
           :examples $ []
-          :schema $ quote $ Fn
-            reel.typed/State Op $ Map Tag StoreValue
+          :schema $ quote $ Fn (reel.typed/State Op app.schema/Store)
             Fn reel.typed/Control $ -> Unit
             -> respo.schema/Component
-            :generics StoreValue
             :features :state
         'comp-global-map-network $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-global-map-network (graph-data)
@@ -2126,8 +2122,7 @@
           :code $ quote $ defref *reel
             typed/State :base schema/store :store schema/store :records ([]) :pointer None :stopped? false :display? false :merged? false
           :examples $ []
-          :schema $ quote $ Ref
-            typed/State schema/Op $ Map Tag Dynamic
+          :schema $ quote $ Ref (typed/State schema/Op schema/Store)
         '*storage-ready? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *storage-ready? false
           :examples $ []
@@ -2184,9 +2179,12 @@
           :schema $ quote $ Fn typed/Control (-> Unit) (:features :state)
         'persist-storage! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-storage! ()
-            when @*storage-ready? $ browser/storage-set!
-              .unwrap $ get config/site :storage-key
-              format-cirru-edn $ :store @*reel
+            when @*storage-ready? $ let
+                store $ :store @*reel
+                wire $ assoc (:extra store) :states $ :states store
+              browser/storage-set!
+                .unwrap $ get config/site :storage-key
+                format-cirru-edn wire
             , &unit
           :examples $ []
           :schema $ quote $ Fn (-> Unit) (:features :js-ffi :state)
@@ -2288,13 +2286,19 @@
           :code $ quote $ defenum Op
             :states (List respo.schema/CoordKey) Dynamic
             :reader (List respo.schema/CoordKey) app.schema/ReaderState
-            :hydrate-storage $ Map Tag Dynamic
+            :hydrate-storage app.schema/Store
           :examples $ []
           :schema $ quote EnumDef
         'ReaderState $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ReaderState (:selected String) (:active-section String)
             :history $ List String
             :view Tag
+          :examples $ []
+          :schema $ quote StructDef
+        'Store $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defstruct Store
+            :states $ Map respo.schema/CoordKey Dynamic
+            :extra $ Map Tag Dynamic
           :examples $ []
           :schema $ quote StructDef
         'decode-knowledge-doc $ %{} 'CodeEntry
@@ -2371,18 +2375,16 @@
                           (:none) branch
                       assoc cursor-states :knowledge-graph normalized
                   (:none) cursor-states
-              assoc store :states checked-states
+              Store :states checked-states :extra $ dissoc store :states
           :examples $ []
-          :schema $ quote $ Fn Input
-            -> $ Map Tag Dynamic
-            :generics Input
+          :schema $ quote $ Fn Input (-> Store) (:generics Input)
         'store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def store
-            {} $ :states $ {}
-              :cursor $ []
+            Store :states
+              {} $ :cursor $ []
+              , :extra $ {}
           :examples $ []
-          :schema $ quote $ Map Tag
-            Map Tag $ List respo.schema/CoordKey
+          :schema $ quote Store
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.schema
     'app.updater $ %{} 'FileEntry
@@ -2391,38 +2393,42 @@
           :code $ quote $ defn updater (store op op-id op-time)
             match op
               (:states cursor s)
-                assoc store :states $ decode-map-as
-                  update-state-tree
-                    .unwrap-or (get store :states) ({})
-                    , cursor s
+                struct-with store $ :states $ decode-map-as
+                  update-state-tree (:states store) cursor s
                   Map respo.schema/CoordKey Dynamic
               (:reader cursor s)
-                assoc store :states $ decode-map-as
-                  update-state-tree
-                    .unwrap-or (get store :states) ({})
-                    , cursor s
+                struct-with store $ :states $ decode-map-as
+                  update-state-tree (:states store) cursor s
                   Map respo.schema/CoordKey Dynamic
               (:hydrate-storage data) data
           :examples $ []
-          :schema $ quote $ Fn (Map Tag StoreValue) app.schema/Op String Number
-            -> $ Map Tag Dynamic
-            :generics StoreValue
+          :schema $ quote $ Fn app.schema/Store app.schema/Op String Number (-> app.schema/Store)
           :tests $ [] $ %{} 'TestEntry (:name |state-path-and-open-store)
             :code $ quote $ let
-                initial $ {} (:content |kept)
-                  :states $ .unwrap $ get app.schema/store :states
+                initial $ app.schema/decode-store $ {} (:content |kept)
+                  :states $ :states app.schema/store
                 changed $ updater initial
                   app.schema/Op :states ([] :knowledge-graph)
                     {} $ :selected |quaternions
                   , |state 1
-              assert= |kept $ .unwrap $ get changed :content
+              assert= |kept $ .unwrap $ get (:extra changed) :content
               assert=
                 {}
                   :cursor $ []
                   :knowledge-graph $ {} $ :data
                     {} $ :selected |quaternions
-                .unwrap $ get changed :states
+                :states changed
               assert= initial $ updater changed (app.schema/Op :hydrate-storage initial) |restore 2
+              let
+                  wire $ assoc (:extra changed) :states $ :states changed
+                  restored $ app.schema/decode-store $ parse-cirru-edn (format-cirru-edn wire)
+                assert= |kept $ .unwrap $ get (:extra restored) :content
+                match
+                  get-in (:states restored) ([] :knowledge-graph :data)
+                  (:ok value)
+                    assert= |quaternions $ :selected $ app.schema/decode-reader-state value
+                  (:err error)
+                    raise $ str error
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater
           :require $ respo.cursor :refer $ update-state-tree

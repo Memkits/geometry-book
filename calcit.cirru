@@ -110,9 +110,10 @@
                   , None
           :examples $ []
           :schema $ quote $ Fn
-            reel.typed/State Op $ Map Tag Dynamic
+            reel.typed/State Op $ Map Tag StoreValue
             Fn reel.typed/Control $ -> Unit
             -> respo.schema/Component
+            :generics StoreValue
             :features :state
         'comp-global-map-network $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-global-map-network (graph-data)
@@ -2311,17 +2312,20 @@
               assert= 0 $ count $ .unwrap (:tags explicit-tags)
         'decode-reader-state $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-reader-state (raw)
-            let
-                fields $ decode-map-as
-                  if (struct? raw) (&struct:to-map raw) raw
-                  Map Tag Dynamic
-              decode-map-as
-                merge
-                  {} (:selected |complex-numbers) (:active-section |history)
-                    :history $ []
-                    :view :reader
-                  , fields
-                , 'app.schema/ReaderState
+            if
+              and (struct? raw) (&struct:matches? raw ReaderState)
+              assert-type raw ReaderState
+              let
+                  fields $ decode-map-as
+                    if (struct? raw) (&struct:to-map raw) raw
+                    Map Tag Dynamic
+                decode-map-as
+                  merge
+                    {} (:selected |complex-numbers) (:active-section |history)
+                      :history $ []
+                      :view :reader
+                    , fields
+                  , 'app.schema/ReaderState
           :examples $ []
           :schema $ quote $ Fn Input (-> ReaderState) (:generics Input)
           :tests $ [] $ %{} 'TestEntry (:name |legacy-map-and-archived-struct)
@@ -2377,7 +2381,8 @@
             {} $ :states $ {}
               :cursor $ []
           :examples $ []
-          :schema $ quote $ Map Tag Dynamic
+          :schema $ quote $ Map Tag
+            Map Tag $ List respo.schema/CoordKey
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.schema
     'app.updater $ %{} 'FileEntry
@@ -2399,11 +2404,13 @@
                   Map respo.schema/CoordKey Dynamic
               (:hydrate-storage data) data
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic) app.schema/Op String Number
+          :schema $ quote $ Fn (Map Tag StoreValue) app.schema/Op String Number
             -> $ Map Tag Dynamic
+            :generics StoreValue
           :tests $ [] $ %{} 'TestEntry (:name |state-path-and-open-store)
             :code $ quote $ let
-                initial $ assoc app.schema/store :content |kept
+                initial $ {} (:content |kept)
+                  :states $ .unwrap $ get app.schema/store :states
                 changed $ updater initial
                   app.schema/Op :states ([] :knowledge-graph)
                     {} $ :selected |quaternions

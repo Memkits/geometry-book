@@ -110,9 +110,10 @@
                   , None
           :examples $ []
           :schema $ quote $ Fn
-            reel.typed/State Op $ Map Tag Dynamic
+            reel.typed/State Op $ Map Tag StoreValue
             Fn reel.typed/Control $ -> Unit
             -> respo.schema/Component
+            :generics StoreValue
             :features :state
         'comp-global-map-network $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-global-map-network (graph-data)
